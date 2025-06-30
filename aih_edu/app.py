@@ -315,6 +315,15 @@ def api_emerging_skills():
                     "source_analysis": "future_predictions",
                     "description": "Post-quantum cryptographic algorithms and implementation strategies",
                     "related_skills": ["Cryptographic Protocols", "Key Management", "Algorithm Analysis"]
+                },
+                {
+                    "skill_name": "Vibe Coding",
+                    "category": "programming_methodology",
+                    "urgency_score": 0.75,
+                    "demand_trend": "emerging",
+                    "source_analysis": "trend_analysis",
+                    "description": "A programming approach that emphasizes mood, atmosphere, and intuitive coding practices to enhance developer productivity and creativity",
+                    "related_skills": ["Creative Programming", "Developer Experience", "Flow State Programming", "Ambient Development"]
                 }
             ]
             
