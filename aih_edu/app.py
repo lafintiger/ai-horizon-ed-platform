@@ -597,6 +597,39 @@ def database_browser():
     """Database browser web interface"""
     return render_template('database_browser.html')
 
+@app.route('/skills')
+def skills_overview():
+    """Learn More page - overview of all skills with learning paths"""
+    try:
+        # Get all emerging skills
+        skills = db.get_emerging_skills()
+        
+        # Get resource counts for each skill
+        skills_with_resources = []
+        for skill in skills:
+            resources = db.search_resources(query=skill['skill_name'], limit=100)
+            
+            # Group resources by type for display
+            grouped_resources = {}
+            for resource in resources:
+                res_type = resource['resource_type']
+                if res_type not in grouped_resources:
+                    grouped_resources[res_type] = []
+                grouped_resources[res_type].append(resource)
+            
+            skill['resource_count'] = len(resources)
+            skill['resource_types'] = list(grouped_resources.keys())
+            skills_with_resources.append(skill)
+        
+        # Sort by urgency score
+        skills_with_resources.sort(key=lambda x: x['urgency_score'], reverse=True)
+        
+        return render_template('skills_overview.html', skills=skills_with_resources)
+        
+    except Exception as e:
+        logger.error(f"Error loading skills overview: {e}")
+        return render_template('skills_overview.html', skills=[])
+
 @app.route('/skill/<skill_name>')
 def skill_detail(skill_name):
     """Detailed skill page with summary and curated resources"""
