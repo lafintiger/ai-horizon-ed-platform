@@ -14,6 +14,8 @@ import sys
 import argparse
 import asyncio
 import logging
+import threading
+import uuid
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request
@@ -53,6 +55,148 @@ try:
         print("⚠️  Resource discovery engine not available (missing API keys)")
 except Exception as e:
     print(f"❌ Failed to initialize resource discovery engine: {e}")
+
+# Background task management (in production, use Redis or database)
+discovery_tasks = {}
+
+def discover_resources_background(task_id, skill):
+    """Background function to discover resources with progress tracking"""
+    try:
+        discovery_tasks[task_id]['status'] = 'processing'
+        discovery_tasks[task_id]['progress'] = 10
+        discovery_tasks[task_id]['current_step'] = 'Starting resource discovery...'
+        
+        if not discovery_engine:
+            discovery_tasks[task_id]['status'] = 'failed'
+            discovery_tasks[task_id]['error'] = 'Resource discovery engine not available'
+            return
+        
+        # Check for cached resources first
+        discovery_tasks[task_id]['progress'] = 20
+        discovery_tasks[task_id]['current_step'] = 'Checking for existing resources...'
+        
+        existing_resources = db.search_resources(query=skill, limit=20)
+        if existing_resources and len(existing_resources) >= 5:
+            # Return cached results
+            grouped_resources = {}
+            for resource in existing_resources[:10]:
+                res_type = resource['resource_type']
+                if res_type not in grouped_resources:
+                    grouped_resources[res_type] = []
+                grouped_resources[res_type].append(resource)
+            
+            discovery_tasks[task_id]['status'] = 'completed'
+            discovery_tasks[task_id]['progress'] = 100
+            discovery_tasks[task_id]['current_step'] = 'Discovery completed (cached results)'
+            discovery_tasks[task_id]['results'] = {
+                "skill": skill,
+                "resources": grouped_resources,
+                "total_resources": len(existing_resources),
+                "cached": True,
+                "discovery_timestamp": datetime.now().isoformat()
+            }
+            return
+        
+        # Discover new resources
+        discovery_tasks[task_id]['progress'] = 30
+        discovery_tasks[task_id]['current_step'] = 'Discovering new resources...'
+        
+        resource_types = ["youtube_videos", "online_courses", "documentation", "tools"]
+        
+        # Run discovery in a new event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            resources = loop.run_until_complete(
+                discovery_engine.discover_resources_for_skill(skill, resource_types[:2])  # Limit to 2 types for speed
+            )
+        finally:
+            loop.close()
+        
+        discovery_tasks[task_id]['progress'] = 70
+        discovery_tasks[task_id]['current_step'] = 'Storing discovered resources...'
+        
+        if not resources:
+            discovery_tasks[task_id]['status'] = 'completed'
+            discovery_tasks[task_id]['progress'] = 100
+            discovery_tasks[task_id]['results'] = {
+                "skill": skill,
+                "resources": {},
+                "total_resources": 0,
+                "error": "No resources discovered"
+            }
+            return
+        
+        # Store resources
+        skill_id = None
+        stored_resources = []
+        
+        # Find skill ID for linking
+        skills = db.get_emerging_skills()
+        matching_skill = next(
+            (s for s in skills if s['skill_name'].lower() == skill.lower()), 
+            None
+        )
+        skill_id = matching_skill['id'] if matching_skill else None
+        
+        for resource_data in resources:
+            try:
+                # Map to database format
+                db_resource = {
+                    'title': resource_data['title'],
+                    'description': resource_data['description'],
+                    'url': resource_data['url'],
+                    'resource_type': resource_data['resource_type'],
+                    'skill_category': skill.lower().replace(' ', '_'),
+                    'learning_level': 'intermediate',
+                    'duration_minutes': resource_data.get('duration_minutes', 0),
+                    'quality_score': resource_data['quality_score'],
+                    'author': resource_data.get('author', ''),
+                    'source': resource_data.get('source_platform', ''),
+                    'keywords': resource_data.get('keywords', [])
+                }
+                
+                # Add to database
+                resource_id = db.add_resource(db_resource)
+                stored_resources.append(resource_id)
+                
+                if skill_id:
+                    db.link_skill_to_resource(
+                        skill_id, 
+                        resource_id, 
+                        resource_data['quality_score'],
+                        resource_data['resource_type']
+                    )
+                    
+            except Exception as e:
+                logger.warning(f"Failed to store resource {resource_data['title']}: {e}")
+        
+        # Group resources by type for response
+        grouped_resources = {}
+        for resource in resources:
+            res_type = resource['resource_type']
+            if res_type not in grouped_resources:
+                grouped_resources[res_type] = []
+            grouped_resources[res_type].append(resource)
+        
+        # Mark as completed
+        discovery_tasks[task_id]['status'] = 'completed'
+        discovery_tasks[task_id]['progress'] = 100
+        discovery_tasks[task_id]['current_step'] = 'Discovery completed successfully!'
+        discovery_tasks[task_id]['results'] = {
+            "skill": skill,
+            "resources": grouped_resources,
+            "total_resources": len(resources),
+            "stored_resources": len(stored_resources),
+            "discovery_timestamp": datetime.now().isoformat(),
+            "resource_types_searched": resource_types[:2]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in background discovery for {skill}: {e}")
+        discovery_tasks[task_id]['status'] = 'failed'
+        discovery_tasks[task_id]['error'] = str(e)
 
 @app.route('/')
 def index():
@@ -138,101 +282,90 @@ def api_emerging_skills():
 
 @app.route('/api/discover/<skill>')
 def api_discover_resources(skill):
-    """Discover educational resources for a specific skill"""
+    """Start background resource discovery for a specific skill"""
     try:
-        if not discovery_engine:
+        # Check for existing cached resources first
+        existing_resources = db.search_resources(query=skill, limit=20)
+        if existing_resources and len(existing_resources) >= 8:
+            # Return cached results immediately if we have enough
+            grouped_resources = {}
+            for resource in existing_resources[:12]:
+                res_type = resource['resource_type']
+                if res_type not in grouped_resources:
+                    grouped_resources[res_type] = []
+                grouped_resources[res_type].append(resource)
+            
             return jsonify({
-                "error": "Resource discovery engine not available",
-                "message": "Please configure Perplexity API key to enable resource discovery"
-            }), 503
+                "skill": skill,
+                "resources": grouped_resources,
+                "total_resources": len(existing_resources),
+                "cached": True,
+                "discovery_timestamp": datetime.now().isoformat()
+            })
         
-        # Get resource types from query parameters
-        resource_types = request.args.getlist('types')
-        if not resource_types:
-            resource_types = ["youtube_videos", "online_courses", "documentation", "tools"]
+        # Start background discovery for new resources
+        task_id = str(uuid.uuid4())
+        discovery_tasks[task_id] = {
+            'status': 'started',
+            'progress': 0,
+            'current_step': 'Initializing resource discovery...',
+            'skill': skill,
+            'created_at': datetime.now().isoformat()
+        }
         
-        # Run discovery in a new event loop (since Flask isn't async)
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        try:
-            resources = loop.run_until_complete(
-                discovery_engine.discover_resources_for_skill(skill, resource_types)
-            )
-        finally:
-            loop.close()
-        
-        # Store discovered resources in database
-        skill_id = None
-        stored_resources = []
-        
-        for resource_data in resources:
-            try:
-                # Map to database format
-                db_resource = {
-                    'title': resource_data['title'],
-                    'description': resource_data['description'],
-                    'url': resource_data['url'],
-                    'resource_type': resource_data['resource_type'],
-                    'skill_category': skill.lower().replace(' ', '_'),
-                    'learning_level': 'intermediate',  # Default level
-                    'duration_minutes': resource_data.get('duration_minutes', 0),
-                    'quality_score': resource_data['quality_score'],
-                    'author': resource_data.get('author', ''),
-                    'source': resource_data.get('source_platform', ''),
-                    'keywords': resource_data.get('keywords', [])
-                }
-                
-                # Add to database
-                resource_id = db.add_resource(db_resource)
-                stored_resources.append(resource_id)
-                
-                # Link to skill if we have a skill record
-                if skill_id is None:
-                    # Try to find or create skill record
-                    skills = db.get_emerging_skills()
-                    matching_skill = next(
-                        (s for s in skills if s['skill_name'].lower() == skill.lower()), 
-                        None
-                    )
-                    if matching_skill:
-                        skill_id = matching_skill['id']
-                
-                if skill_id:
-                    db.link_skill_to_resource(
-                        skill_id, 
-                        resource_id, 
-                        resource_data['quality_score'],
-                        resource_data['resource_type']
-                    )
-                    
-            except Exception as e:
-                logger.warning(f"Failed to store resource {resource_data['title']}: {e}")
-        
-        # Group resources by type for response
-        grouped_resources = {}
-        for resource in resources:
-            res_type = resource['resource_type']
-            if res_type not in grouped_resources:
-                grouped_resources[res_type] = []
-            grouped_resources[res_type].append(resource)
+        # Start background thread
+        thread = threading.Thread(
+            target=discover_resources_background,
+            args=(task_id, skill)
+        )
+        thread.daemon = True
+        thread.start()
         
         return jsonify({
+            "task_id": task_id,
             "skill": skill,
-            "resources": grouped_resources,
-            "total_resources": len(resources),
-            "stored_resources": len(stored_resources),
-            "discovery_timestamp": datetime.now().isoformat(),
-            "resource_types_searched": resource_types
+            "status": "discovery_started",
+            "message": "Resource discovery started in background. Check status for progress.",
+            "status_url": f"/api/discover/status/{task_id}"
         })
         
     except Exception as e:
-        logger.error(f"Error discovering resources for {skill}: {e}")
+        logger.error(f"Error starting discovery for {skill}: {e}")
         return jsonify({
-            "error": "Resource discovery failed",
+            "error": "Failed to start resource discovery",
             "skill": skill,
             "message": str(e)
         }), 500
+
+@app.route('/api/discover/status/<task_id>')
+def api_discovery_status(task_id):
+    """Check the status of a resource discovery task"""
+    if task_id not in discovery_tasks:
+        return jsonify({"error": "Task not found"}), 404
+    
+    task = discovery_tasks[task_id]
+    
+    response = {
+        "task_id": task_id,
+        "status": task['status'],
+        "progress": task['progress'],
+        "current_step": task.get('current_step', ''),
+        "skill": task['skill'],
+        "created_at": task['created_at']
+    }
+    
+    if task['status'] == 'completed' and 'results' in task:
+        response['results'] = task['results']
+        # Clean up old task after returning results
+        if task_id in discovery_tasks:
+            del discovery_tasks[task_id]
+    elif task['status'] == 'failed' and 'error' in task:
+        response['error'] = task['error']
+        # Clean up failed task
+        if task_id in discovery_tasks:
+            del discovery_tasks[task_id]
+    
+    return jsonify(response)
 
 @app.route('/api/database/browse')
 def api_browse_database():
