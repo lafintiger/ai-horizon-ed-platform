@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Browser - AI-Horizon Ed</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar-custom {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .main-container {
+            padding: 2rem 0;
+        }
+        
+        .stats-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .filter-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .resource-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .resource-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+        
+        .quality-high { border-left-color: #28a745; }
+        .quality-medium { border-left-color: #ffc107; }
+        .quality-low { border-left-color: #dc3545; }
+        
+        .quality-badge {
+            font-size: 0.8rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 12px;
+        }
+        
+        .type-badge {
+            background: #e9ecef;
+            color: #495057;
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 8px;
+            margin-right: 0.5rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: white;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+        
+        .btn-filter {
+            background: #667eea;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            color: white;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-filter:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-database me-2"></i>
+                AI-Horizon Ed - Database Browser
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link btn btn-outline-light me-2" href="/">
+                    <i class="fas fa-home me-1"></i>Main Dashboard
+                </a>
+                <a class="nav-link btn btn-outline-light" href="/" onclick="window.close()">
+                    <i class="fas fa-times me-1"></i>Close
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container main-container">
+        <!-- Database Statistics -->
+        <div class="stats-card">
+            <h2><i class="fas fa-chart-bar me-2"></i>Database Statistics</h2>
+            <div id="statsContent" class="row">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>Loading statistics...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-card">
+            <h3><i class="fas fa-filter me-2"></i>Filter Resources</h3>
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="searchInput" class="form-label">Search</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search title, description...">
+                </div>
+                <div class="col-md-2">
+                    <label for="categorySelect" class="form-label">Category</label>
+                    <select class="form-select" id="categorySelect">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="typeSelect" class="form-label">Type</label>
+                    <select class="form-select" id="typeSelect">
+                        <option value="">All Types</option>
+                        <option value="youtube_video">YouTube Video</option>
+                        <option value="online_course">Online Course</option>
+                        <option value="documentation">Documentation</option>
+                        <option value="tool">Tool</option>
+                        <option value="book">Book</option>
+                        <option value="article">Article</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="qualitySelect" class="form-label">Min Quality</label>
+                    <select class="form-select" id="qualitySelect">
+                        <option value="0">All Quality</option>
+                        <option value="0.8">High (0.8+)</option>
+                        <option value="0.5">Medium (0.5+)</option>
+                        <option value="0.3">Low (0.3+)</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-filter w-100" onclick="loadResources()">
+                        <i class="fas fa-search me-1"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resources List -->
+        <div class="stats-card">
+            <h3><i class="fas fa-list me-2"></i>Discovered Resources</h3>
+            <div id="resourcesContent">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>Loading resources...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allCategories = new Set();
+
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadResources();
+        });
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/database/stats');
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                displayStats(data);
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                document.getElementById('statsContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Failed to load statistics: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function displayStats(stats) {
+            const statsHtml = `
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.total_resources || 0}</div>
+                        <div class="stat-label">Total Resources</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.emerging_skills_count || 0}</div>
+                        <div class="stat-label">Emerging Skills</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.resources_by_quality?.high || 0}</div>
+                        <div class="stat-label">High Quality Resources</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">${Object.keys(stats.resources_by_type || {}).length}</div>
+                        <div class="stat-label">Resource Types</div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('statsContent').innerHTML = statsHtml;
+        }
+
+        async function loadResources() {
+            try {
+                const searchQuery = document.getElementById('searchInput').value;
+                const category = document.getElementById('categorySelect').value;
+                const type = document.getElementById('typeSelect').value;
+                const minQuality = document.getElementById('qualitySelect').value;
+
+                const params = new URLSearchParams();
+                if (searchQuery) params.append('search', searchQuery);
+                if (category) params.append('category', category);
+                if (type) params.append('type', type);
+                if (minQuality) params.append('min_quality', minQuality);
+                params.append('limit', '100');
+
+                const response = await fetch(`/api/database/browse?${params}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Update category options
+                updateCategoryOptions(data.resources);
+                
+                displayResources(data.resources, data.total_found);
+            } catch (error) {
+                console.error('Error loading resources:', error);
+                document.getElementById('resourcesContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Failed to load resources: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function updateCategoryOptions(resources) {
+            resources.forEach(resource => {
+                allCategories.add(resource.skill_category);
+            });
+            
+            const categorySelect = document.getElementById('categorySelect');
+            const currentValue = categorySelect.value;
+            
+            // Clear existing options except "All Categories"
+            categorySelect.innerHTML = '<option value="">All Categories</option>';
+            
+            // Add category options
+            Array.from(allCategories).sort().forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                categorySelect.appendChild(option);
+            });
+            
+            // Restore selected value
+            categorySelect.value = currentValue;
+        }
+
+        function displayResources(resources, totalFound) {
+            if (!resources || resources.length === 0) {
+                document.getElementById('resourcesContent').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <h4>No Resources Found</h4>
+                        <p>Try adjusting your filters or discover some resources from the main dashboard.</p>
+                        <a href="/" class="btn btn-filter">
+                            <i class="fas fa-search me-1"></i>Discover Resources
+                        </a>
+                    </div>
+                `;
+                return;
+            }
+
+            const resourcesHtml = `
+                <div class="mb-3">
+                    <strong>${totalFound} resources found</strong>
+                </div>
+                ${resources.map(resource => `
+                    <div class="resource-card ${getQualityClass(resource.quality_score)}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="mb-0">
+                                <a href="${resource.url}" target="_blank" class="text-decoration-none text-dark">
+                                    ${resource.title}
+                                    <i class="fas fa-external-link-alt ms-1 text-muted" style="font-size: 0.7rem;"></i>
+                                </a>
+                            </h5>
+                            <span class="quality-badge ${getQualityBadgeClass(resource.quality_score)}">
+                                ${Math.round(resource.quality_score * 100)}% Quality
+                            </span>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <span class="type-badge">${resource.resource_type.replace(/_/g, ' ')}</span>
+                            <span class="type-badge">${resource.skill_category.replace(/_/g, ' ')}</span>
+                            ${resource.author ? `<span class="type-badge"><i class="fas fa-user me-1"></i>${resource.author}</span>` : ''}
+                            ${resource.duration_minutes ? `<span class="type-badge"><i class="fas fa-clock me-1"></i>${resource.duration_minutes} min</span>` : ''}
+                        </div>
+                        
+                        <p class="text-muted mb-2">${resource.description || 'No description available'}</p>
+                        
+                        ${resource.keywords && resource.keywords.length > 0 ? `
+                            <div class="mb-2">
+                                ${resource.keywords.slice(0, 5).map(keyword => 
+                                    `<span class="badge bg-light text-dark me-1">${keyword}</span>`
+                                ).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                Added: ${new Date(resource.created_at).toLocaleDateString()}
+                            </small>
+                            <small class="text-muted">
+                                Source: ${resource.source || 'Unknown'}
+                            </small>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+            
+            document.getElementById('resourcesContent').innerHTML = resourcesHtml;
+        }
+
+        function getQualityClass(score) {
+            if (score >= 0.8) return 'quality-high';
+            if (score >= 0.5) return 'quality-medium';
+            return 'quality-low';
+        }
+
+        function getQualityBadgeClass(score) {
+            if (score >= 0.8) return 'badge bg-success';
+            if (score >= 0.5) return 'badge bg-warning';
+            return 'badge bg-danger';
+        }
+
+        // Add enter key support for search
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadResources();
+            }
+        });
+    </script>
+</body>
+</html> 
