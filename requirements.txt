@@ -6,7 +6,7 @@ Flask-CORS==4.0.0
 Werkzeug==2.3.7
 
 # Database
-sqlite3  # Built-in with Python
+# sqlite3 is built-in with Python - no need to install
 
 # HTTP Requests
 requests==2.31.0
