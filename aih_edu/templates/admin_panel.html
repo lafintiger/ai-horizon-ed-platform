@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - AI-Horizon Ed</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .main-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .admin-hero {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            color: white;
+            text-align: center;
+        }
+        
+        .admin-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .skill-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #667eea;
+        }
+        
+        .urgency-badge {
+            font-size: 0.8rem;
+            font-weight: bold;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+        
+        .urgency-critical { background: #dc3545; color: white; }
+        .urgency-rising { background: #fd7e14; color: white; }
+        .urgency-emerging { background: #198754; color: white; }
+        .urgency-stable { background: #6c757d; color: white; }
+        
+        .action-buttons .btn {
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .alert-custom {
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .loading-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg main-header">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-cogs text-danger me-2"></i>
+                <strong>AI-Horizon Ed Admin</strong>
+                <small class="text-muted ms-2">Platform Management</small>
+            </a>
+            <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                <a href="/" class="nav-link me-3">
+                    <i class="fas fa-home me-1"></i> Dashboard
+                </a>
+                <a href="/skills" class="nav-link me-3">
+                    <i class="fas fa-lightbulb me-1"></i> Learn More
+                </a>
+                <a href="/database" class="nav-link me-3" target="_blank">
+                    <i class="fas fa-database me-1"></i> Browse Resources
+                </a>
+                <span class="badge bg-danger ms-2">
+                    <i class="fas fa-shield-alt"></i> Admin
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Hero Section -->
+        <div class="admin-hero">
+            <h1><i class="fas fa-cogs me-3"></i>Platform Administration</h1>
+            <p class="lead">Manage emerging skills, trigger resource discovery, and monitor platform performance.</p>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="alert-container"></div>
+
+        <!-- Statistics Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-box">
+                    <div class="stat-number">{{ skills | length }}</div>
+                    <div>Active Skills</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-box">
+                    <div class="stat-number">{{ stats.total_resources or 0 }}</div>
+                    <div>Total Resources</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-box">
+                    <div class="stat-number">{{ stats.resources_by_quality.high or 0 }}</div>
+                    <div>High Quality</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-box">
+                    <div class="stat-number">{{ (stats.resources_by_type | length) or 0 }}</div>
+                    <div>Resource Types</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Add New Skill -->
+            <div class="col-lg-6">
+                <div class="admin-card">
+                    <h3><i class="fas fa-plus-circle me-2 text-success"></i>Add New Skill</h3>
+                    <form id="addSkillForm">
+                        <div class="mb-3">
+                            <label for="skillName" class="form-label">Skill Name *</label>
+                            <input type="text" class="form-control" id="skillName" required 
+                                   placeholder="e.g., Advanced Threat Hunting">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="skillDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="skillDescription" rows="3" 
+                                      placeholder="Brief description of the skill and its importance..."></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="skillCategory" class="form-label">Category</label>
+                                <select class="form-select" id="skillCategory">
+                                    <option value="cybersecurity">Cybersecurity</option>
+                                    <option value="programming">Programming</option>
+                                    <option value="ai_security">AI Security</option>
+                                    <option value="cloud_security">Cloud Security</option>
+                                    <option value="network_security">Network Security</option>
+                                    <option value="data_security">Data Security</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="demandTrend" class="form-label">Demand Trend</label>
+                                <select class="form-select" id="demandTrend">
+                                    <option value="emerging">Emerging</option>
+                                    <option value="rising">Rising</option>
+                                    <option value="critical">Critical</option>
+                                    <option value="stable">Stable</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 mt-3">
+                            <label for="urgencyScore" class="form-label">Urgency Score (0.0 - 1.0)</label>
+                            <input type="range" class="form-range" id="urgencyScore" min="0" max="1" step="0.1" value="0.5">
+                            <div class="d-flex justify-content-between">
+                                <small>0.0 (Low)</small>
+                                <span id="urgencyValue" class="fw-bold">0.5</span>
+                                <small>1.0 (Critical)</small>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>Add Skill & Start Discovery
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Bulk Operations -->
+            <div class="col-lg-6">
+                <div class="admin-card">
+                    <h3><i class="fas fa-tasks me-2 text-primary"></i>Bulk Operations</h3>
+                    
+                    <div class="mb-4">
+                        <h5>Re-discover All Skills</h5>
+                        <p class="text-muted">Refresh resources for all existing skills</p>
+                        <button class="btn btn-primary" onclick="bulkDiscoverAll()">
+                            <i class="fas fa-sync-alt me-1"></i>Re-discover All ({{ skills | length }} skills)
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Custom Skill Discovery</h5>
+                        <p class="text-muted">Search for resources on any topic (temporary)</p>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="customSkill" 
+                                   placeholder="Enter any skill or topic...">
+                            <button class="btn btn-outline-secondary" onclick="discoverCustomSkill()">
+                                <i class="fas fa-search me-1"></i>Discover
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Database Actions</h5>
+                        <div class="action-buttons">
+                            <button class="btn btn-warning" onclick="clearLowQualityResources()">
+                                <i class="fas fa-filter me-1"></i>Clear Low Quality
+                            </button>
+                            <button class="btn btn-info" onclick="exportData()">
+                                <i class="fas fa-download me-1"></i>Export Data
+                            </button>
+                            <a href="/database" class="btn btn-outline-primary" target="_blank">
+                                <i class="fas fa-database me-1"></i>Browse Database
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Skills Management -->
+        <div class="admin-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3><i class="fas fa-list me-2 text-info"></i>Manage Existing Skills ({{ skills | length }})</h3>
+                <button class="btn btn-outline-success" onclick="location.reload()">
+                    <i class="fas fa-sync me-1"></i>Refresh
+                </button>
+            </div>
+            
+            {% if skills %}
+                <div class="row">
+                    {% for skill in skills %}
+                    <div class="col-lg-6 mb-3">
+                        <div class="skill-item">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="mb-1">{{ skill.skill_name }}</h5>
+                                <span class="urgency-badge urgency-{{ skill.demand_trend }}">
+                                    {{ skill.demand_trend }}
+                                </span>
+                            </div>
+                            
+                            <p class="text-muted mb-2">{{ skill.description }}</p>
+                            
+                            <div class="row text-center mb-3">
+                                <div class="col-4">
+                                    <strong>{{ (skill.urgency_score * 100) | round | int }}%</strong>
+                                    <br><small class="text-muted">Urgency</small>
+                                </div>
+                                <div class="col-4">
+                                    <strong>{{ skill.category.replace('_', ' ').title() }}</strong>
+                                    <br><small class="text-muted">Category</small>
+                                </div>
+                                <div class="col-4">
+                                    <strong>Resources</strong>
+                                    <br><small class="text-muted">Available</small>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button class="btn btn-primary btn-sm" onclick="discoverSkill('{{ skill.skill_name }}')">
+                                    <i class="fas fa-search me-1"></i>Re-discover
+                                </button>
+                                <a href="/skill/{{ skill.skill_name.lower().replace(' ', '-') }}" class="btn btn-outline-info btn-sm" target="_blank">
+                                    <i class="fas fa-eye me-1"></i>View Page
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center text-muted p-4">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <h5>No Skills Found</h5>
+                    <p>Add your first skill using the form above.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <h5 id="loadingMessage">Processing...</h5>
+            <p id="loadingDetails" class="text-muted">Please wait while we process your request.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Update urgency score display
+        document.getElementById('urgencyScore').addEventListener('input', function() {
+            document.getElementById('urgencyValue').textContent = this.value;
+        });
+
+        // Add new skill
+        document.getElementById('addSkillForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const skillData = {
+                skill_name: document.getElementById('skillName').value,
+                description: document.getElementById('skillDescription').value,
+                category: document.getElementById('skillCategory').value,
+                demand_trend: document.getElementById('demandTrend').value,
+                urgency_score: parseFloat(document.getElementById('urgencyScore').value)
+            };
+            
+            showLoading('Adding Skill...', 'Creating new skill and starting resource discovery...');
+            
+            try {
+                const response = await fetch('/api/admin/add-skill', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(skillData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', `Success! Skill "${skillData.skill_name}" added successfully.`);
+                    
+                    // Start discovery for the new skill
+                    await discoverSkill(skillData.skill_name);
+                    
+                    // Reset form and refresh
+                    document.getElementById('addSkillForm').reset();
+                    document.getElementById('urgencyValue').textContent = '0.5';
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('danger', 'Error: ' + data.error);
+                }
+            } catch (error) {
+                showAlert('danger', 'Failed to add skill: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // Bulk discover all skills
+        async function bulkDiscoverAll() {
+            const skills = {{ skills | map(attribute='skill_name') | list | tojson }};
+            
+            if (skills.length === 0) {
+                showAlert('warning', 'No skills to discover resources for.');
+                return;
+            }
+            
+            showLoading('Bulk Discovery Started', `Starting resource discovery for ${skills.length} skills...`);
+            
+            try {
+                const response = await fetch('/api/admin/bulk-discover', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ skills })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('info', `Discovery started for ${skills.length} skills. This may take several minutes.`);
+                } else {
+                    showAlert('danger', 'Error: ' + data.error);
+                }
+            } catch (error) {
+                showAlert('danger', 'Failed to start bulk discovery: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Discover individual skill
+        async function discoverSkill(skillName) {
+            showLoading('Discovering Resources...', `Searching for educational resources for "${skillName}"...`);
+            
+            try {
+                const response = await fetch(`/api/discover/${encodeURIComponent(skillName)}`);
+                const data = await response.json();
+                
+                if (data.task_id) {
+                    showAlert('info', `Discovery started for "${skillName}". Resources will be available shortly.`);
+                } else {
+                    showAlert('warning', 'Discovery may have failed. Check the logs.');
+                }
+            } catch (error) {
+                showAlert('danger', 'Failed to start discovery: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Discover custom skill
+        async function discoverCustomSkill() {
+            const skillName = document.getElementById('customSkill').value.trim();
+            if (!skillName) {
+                showAlert('warning', 'Please enter a skill or topic to search for.');
+                return;
+            }
+            
+            await discoverSkill(skillName);
+            document.getElementById('customSkill').value = '';
+        }
+
+        // Clear low quality resources
+        async function clearLowQualityResources() {
+            if (!confirm('This will remove all resources with quality score below 0.3. Continue?')) return;
+            
+            showAlert('info', 'Low quality resource cleanup is not yet implemented.');
+        }
+
+        // Export data
+        async function exportData() {
+            showAlert('info', 'Data export functionality is coming soon.');
+        }
+
+        // Show alert
+        function showAlert(type, message) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-custom alert-dismissible fade show" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            document.getElementById('alert-container').innerHTML = alertHtml;
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                const alert = document.querySelector('.alert');
+                if (alert) alert.remove();
+            }, 5000);
+        }
+
+        // Show loading overlay
+        function showLoading(title, message) {
+            document.getElementById('loadingMessage').textContent = title;
+            document.getElementById('loadingDetails').textContent = message;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        // Hide loading overlay
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    </script>
+</body>
+</html> 

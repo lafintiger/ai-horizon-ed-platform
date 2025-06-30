@@ -597,6 +597,113 @@ def database_browser():
     """Database browser web interface"""
     return render_template('database_browser.html')
 
+@app.route('/admin')
+def admin_panel():
+    """Admin panel for managing skills and discovery"""
+    try:
+        # Get current skills
+        skills = db.get_emerging_skills()
+        
+        # Get discovery statistics
+        stats = db.get_resource_stats()
+        
+        return render_template('admin_panel.html', skills=skills, stats=stats)
+        
+    except Exception as e:
+        logger.error(f"Error loading admin panel: {e}")
+        return render_template('admin_panel.html', skills=[], stats={})
+
+@app.route('/api/admin/add-skill', methods=['POST'])
+def api_add_skill():
+    """Add a new skill for discovery"""
+    try:
+        data = request.get_json()
+        
+        skill_name = data.get('skill_name', '').strip()
+        if not skill_name:
+            return jsonify({"error": "Skill name is required"}), 400
+            
+        description = data.get('description', '').strip()
+        category = data.get('category', 'cybersecurity').strip()
+        urgency_score = float(data.get('urgency_score', 0.5))
+        demand_trend = data.get('demand_trend', 'emerging').strip()
+        
+        # Check if skill already exists
+        existing_skills = db.get_emerging_skills()
+        if any(s['skill_name'].lower() == skill_name.lower() for s in existing_skills):
+            return jsonify({"error": "Skill already exists"}), 400
+        
+        # Add the skill
+        skill_data = {
+            "skill_name": skill_name,
+            "description": description or f"Emerging skill in {category}",
+            "category": category,
+            "urgency_score": max(0.0, min(1.0, urgency_score)),
+            "demand_trend": demand_trend,
+            "source_analysis": "manual_admin_entry"
+        }
+        
+        skill_id = db.add_emerging_skill(skill_data)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Skill '{skill_name}' added successfully",
+            "skill_id": skill_id,
+            "skill_data": skill_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error adding skill: {e}")
+        return jsonify({"error": "Failed to add skill"}), 500
+
+@app.route('/api/admin/bulk-discover', methods=['POST'])
+def api_bulk_discover():
+    """Trigger discovery for multiple skills"""
+    try:
+        data = request.get_json()
+        skill_names = data.get('skills', [])
+        
+        if not skill_names:
+            return jsonify({"error": "No skills specified"}), 400
+            
+        task_ids = []
+        for skill_name in skill_names:
+            # Start discovery for each skill
+            task_id = str(uuid.uuid4())
+            task_data = {
+                'task_id': task_id,
+                'skill': skill_name,
+                'status': 'pending',
+                'progress': 0,
+                'created_at': datetime.now().isoformat()
+            }
+            
+            # Save task
+            update_discovery_task(task_id, task_data)
+            
+            # Start background discovery
+            threading.Thread(
+                target=discover_resources_background,
+                args=(task_id, skill_name),
+                daemon=True
+            ).start()
+            
+            task_ids.append({
+                'skill': skill_name,
+                'task_id': task_id,
+                'status_url': f'/api/discover/status/{task_id}'
+            })
+            
+        return jsonify({
+            "success": True,
+            "message": f"Started discovery for {len(skill_names)} skills",
+            "tasks": task_ids
+        })
+        
+    except Exception as e:
+        logger.error(f"Error starting bulk discovery: {e}")
+        return jsonify({"error": "Failed to start bulk discovery"}), 500
+
 @app.route('/skills')
 def skills_overview():
     """Learn More page - overview of all skills with learning paths"""
