@@ -18,7 +18,7 @@ import threading
 import uuid
 from pathlib import Path
 from datetime import datetime
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -41,6 +41,37 @@ from discover.resource_discovery import get_discovery_engine
 app = Flask(__name__)
 app.secret_key = config.get('SECRET_KEY')
 CORS(app)
+
+# HTTPS enforcement for production
+@app.before_request
+def force_https():
+    """Redirect HTTP requests to HTTPS in production"""
+    # Only enforce HTTPS in production (when not running locally)
+    if not app.debug and not request.is_secure:
+        # Check if we're on Heroku or have a custom domain
+        if request.headers.get('X-Forwarded-Proto', 'http') != 'https':
+            # Get the full URL and replace http with https
+            url = request.url.replace('http://', 'https://', 1)
+            return redirect(url, code=301)
+
+# Security headers for HTTPS
+@app.after_request
+def add_security_headers(response):
+    """Add security headers for HTTPS"""
+    if not app.debug:
+        # HSTS - Force HTTPS for 1 year
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        # Prevent clickjacking
+        response.headers['X-Frame-Options'] = 'DENY'
+        # Prevent MIME type sniffing
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        # XSS protection
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        # Referrer policy
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
+
+
 
 # Initialize database
 db = DatabaseManager()
