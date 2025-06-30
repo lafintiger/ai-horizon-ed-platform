@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ skill.skill_name }} - AI-Horizon Ed</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .main-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .hero-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            color: white;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .urgency-badge {
+            font-size: 0.9rem;
+            font-weight: bold;
+            padding: 0.4rem 1rem;
+            border-radius: 25px;
+        }
+        
+        .urgency-critical { background: #dc3545; color: white; }
+        .urgency-rising { background: #fd7e14; color: white; }
+        .urgency-emerging { background: #198754; color: white; }
+        .urgency-stable { background: #6c757d; color: white; }
+        
+        .resource-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+        
+        .resource-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .quality-score {
+            background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .summary-section {
+            background: linear-gradient(135deg, #fff 0%, #f8f9ff 100%);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .importance-section {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .forecast-section {
+            background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .resource-type-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-badge {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 15px;
+            margin-right: 1rem;
+            display: inline-block;
+        }
+        
+        .resource-meta {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg main-header">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-graduation-cap text-primary me-2"></i>
+                <strong>AI-Horizon Ed</strong>
+                <small class="text-muted ms-2">Educational Resource Curation</small>
+            </a>
+            <div class="ms-auto d-flex align-items-center">
+                <a href="/" class="btn btn-outline-primary me-3">
+                    <i class="fas fa-home me-1"></i> Dashboard
+                </a>
+                <a href="/database" class="btn btn-outline-secondary me-3" target="_blank">
+                    <i class="fas fa-database me-1"></i> Browse Database
+                </a>
+                <span class="badge bg-success">
+                    <i class="fas fa-circle"></i> Active
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="display-4 mb-3">
+                        <i class="fas fa-lightbulb me-3"></i>{{ skill.skill_name }}
+                    </h1>
+                    <p class="lead">{{ skill.description }}</p>
+                    <div class="d-flex flex-wrap align-items-center mt-4">
+                        <span class="urgency-badge urgency-{{ skill.demand_trend }} me-3">
+                            {{ skill.demand_trend.upper() }} DEMAND
+                        </span>
+                        <span class="stat-badge">
+                            <i class="fas fa-chart-bar me-1"></i>
+                            {{ (skill.urgency_score * 100) | round | int }}% Urgency
+                        </span>
+                        <span class="stat-badge">
+                            <i class="fas fa-book me-1"></i>
+                            {{ total_resources }} Resources
+                        </span>
+                        <span class="stat-badge">
+                            <i class="fas fa-tag me-1"></i>
+                            {{ skill.category.replace('_', ' ').title() }}
+                        </span>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-center">
+                    <div class="card bg-white bg-opacity-20 text-white">
+                        <div class="card-body">
+                            <h3>{{ (skill.urgency_score * 100) | round | int }}%</h3>
+                            <p class="mb-0">Market Urgency Score</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                {% if skill.skill_name == "Vibe Coding" %}
+                <!-- Vibe Coding Specific Content -->
+                <div class="summary-section">
+                    <h3><i class="fas fa-info-circle me-2 text-primary"></i>What is Vibe Coding?</h3>
+                    <p class="lead">Vibe Coding is an emerging programming methodology that emphasizes mood, atmosphere, and intuitive coding practices to enhance developer productivity and creativity.</p>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-brain me-2"></i>Core Principles</h5>
+                            <ul>
+                                <li><strong>AI-Assisted Flow:</strong> Seamless integration with AI tools like Cursor, GitHub Copilot, and ChatGPT</li>
+                                <li><strong>Ambient Development:</strong> Creating the right environment and mood for coding</li>
+                                <li><strong>Intuitive Programming:</strong> Focusing on natural, expressive code patterns</li>
+                                <li><strong>Creative Enhancement:</strong> Using AI to amplify human creativity, not replace it</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-tools me-2"></i>Key Technologies</h5>
+                            <ul>
+                                <li><strong>Cursor AI:</strong> Context-aware code generation and editing</li>
+                                <li><strong>GitHub Copilot:</strong> AI pair programming companion</li>
+                                <li><strong>ChatGPT/Claude:</strong> Conversational coding assistance</li>
+                                <li><strong>Bolt.new:</strong> AI-powered full-stack app generation</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="importance-section">
+                    <h3><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Why is Vibe Coding Important?</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-rocket me-2"></i>Industry Impact</h5>
+                            <p>As AI transforms software development, developers who master Vibe Coding will have significant advantages:</p>
+                            <ul>
+                                <li><strong>10x Productivity:</strong> AI-assisted development can dramatically speed up coding</li>
+                                <li><strong>Reduced Cognitive Load:</strong> AI handles routine tasks, freeing mental resources for creativity</li>
+                                <li><strong>Enhanced Problem Solving:</strong> AI partnership enables tackling more complex challenges</li>
+                                <li><strong>Future-Proof Skills:</strong> Essential competency as AI coding tools become standard</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-chart-line me-2"></i>Market Demand</h5>
+                            <p>Growing demand across multiple sectors:</p>
+                            <ul>
+                                <li><strong>Startups:</strong> Rapid prototyping and MVP development</li>
+                                <li><strong>Tech Companies:</strong> Accelerated feature development</li>
+                                <li><strong>Creative Industries:</strong> Interactive media and digital experiences</li>
+                                <li><strong>Cybersecurity:</strong> Rapid tool development and automation</li>
+                            </ul>
+                            
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Skills Gap Alert:</strong> High demand with limited qualified practitioners creates significant career opportunities.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Generic summary for other skills -->
+                <div class="summary-section">
+                    <h3><i class="fas fa-info-circle me-2 text-primary"></i>About {{ skill.skill_name }}</h3>
+                    <p class="lead">{{ skill.description }}</p>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-construction me-2"></i>
+                        <strong>Detailed Analysis Coming Soon:</strong> We're developing comprehensive analysis for this emerging skill based on our workforce intelligence research.
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Forecast Intelligence Section -->
+                <div class="forecast-section">
+                    <h3><i class="fas fa-crystal-ball me-2 text-info"></i>AI-Horizon Workforce Intelligence</h3>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p>Based on our analysis of industry trends, job market data, and technology adoption patterns:</p>
+                            <ul>
+                                <li><strong>Source Analysis:</strong> {{ skill.source_analysis.replace('_', ' ').title() }}</li>
+                                <li><strong>Demand Trend:</strong> {{ skill.demand_trend.title() }} trajectory in job postings</li>
+                                <li><strong>Market Priority:</strong> {{ (skill.urgency_score * 100) | round | int }}% urgency score based on supply/demand gap</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-chart-line me-2"></i>
+                                <strong>Coming Soon:</strong> Detailed citations and forecasts from the main AI-Horizon platform will be integrated here.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resources Section -->
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-book-open me-2"></i>
+                            Curated Learning Resources ({{ total_resources }})
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        {% if resources %}
+                            {% for resource_type, resource_list in resources.items() %}
+                            <div class="resource-type-section mb-4">
+                                <div class="resource-type-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-{% if resource_type == 'youtube_video' %}play{% elif resource_type == 'online_course' %}graduation-cap{% elif resource_type == 'documentation' %}file-alt{% else %}link{% endif %} me-2"></i>
+                                        {{ resource_type.replace('_', ' ').title() }} ({{ resource_list | length }})
+                                    </h5>
+                                </div>
+                                
+                                {% for resource in resource_list %}
+                                <div class="resource-card">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h6 class="mb-0">
+                                            <a href="{{ resource.url }}" target="_blank" class="text-decoration-none text-dark">
+                                                {{ resource.title }}
+                                            </a>
+                                        </h6>
+                                        <span class="quality-score">
+                                            {{ (resource.quality_score * 100) | round | int }}% Quality
+                                        </span>
+                                    </div>
+                                    
+                                    <p class="text-muted mb-3">{{ resource.description }}</p>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="resource-meta">
+                                            <i class="fas fa-external-link-alt me-1"></i>
+                                            {{ resource.source_platform or 'External' }}
+                                            {% if resource.author %}
+                                                • <i class="fas fa-user me-1"></i>{{ resource.author }}
+                                            {% endif %}
+                                            {% if resource.duration_minutes %}
+                                                • <i class="fas fa-clock me-1"></i>{{ resource.duration_minutes }}min
+                                            {% endif %}
+                                        </div>
+                                        <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-external-link-alt me-1"></i>Open Resource
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted p-4">
+                                <i class="fas fa-search fa-3x mb-3"></i>
+                                <h5>No Resources Found</h5>
+                                <p>Resources for this skill haven't been discovered yet.</p>
+                                <a href="/" class="btn btn-primary">
+                                    <i class="fas fa-search me-1"></i>Discover Resources
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Related Skills
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">AI-Assisted Development, Creative Programming, Developer Experience</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Skill Metrics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Urgency Score</label>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: {{ (skill.urgency_score * 100) | round | int }}%">
+                                    {{ (skill.urgency_score * 100) | round | int }}%
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Resource Availability</label>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ ((total_resources / 20) * 100) | round | int if total_resources < 20 else 100 }}%">
+                                    {{ total_resources }} found
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <a href="/" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i>Discover More Resources
+                            </a>
+                            <a href="/database" class="btn btn-outline-secondary" target="_blank">
+                                <i class="fas fa-database me-1"></i>Browse All Resources
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

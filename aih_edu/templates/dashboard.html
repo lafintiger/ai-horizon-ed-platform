@@ -294,9 +294,13 @@
             }
 
             container.innerHTML = skills.map(skill => `
-                <div class="skill-card" onclick="discoverResources('${skill.skill_name}')">
+                <div class="skill-card">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="skill-title mb-1">${skill.skill_name}</h6>
+                        <h6 class="skill-title mb-1">
+                            <a href="/skill/${skill.skill_name.toLowerCase().replace(/\s+/g, '-')}" class="text-decoration-none text-dark">
+                                ${skill.skill_name}
+                            </a>
+                        </h6>
                         <span class="urgency-badge urgency-${skill.demand_trend}">
                             ${skill.demand_trend.toUpperCase()}
                         </span>
@@ -307,9 +311,14 @@
                             <i class="fas fa-chart-bar me-1"></i>
                             Urgency: ${(skill.urgency_score * 100).toFixed(0)}%
                         </small>
-                        <button class="btn discover-btn btn-sm">
-                            <i class="fas fa-search me-1"></i>Discover Resources
-                        </button>
+                        <div>
+                            <a href="/skill/${skill.skill_name.toLowerCase().replace(/\s+/g, '-')}" class="btn btn-outline-primary btn-sm me-2">
+                                <i class="fas fa-book me-1"></i>Learn More
+                            </a>
+                            <button class="btn discover-btn btn-sm" onclick="discoverResources('${skill.skill_name}')">
+                                <i class="fas fa-search me-1"></i>Discover
+                            </button>
+                        </div>
                     </div>
                 </div>
             `).join('');

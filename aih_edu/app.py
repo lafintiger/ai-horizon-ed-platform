@@ -597,6 +597,42 @@ def database_browser():
     """Database browser web interface"""
     return render_template('database_browser.html')
 
+@app.route('/skill/<skill_name>')
+def skill_detail(skill_name):
+    """Detailed skill page with summary and curated resources"""
+    try:
+        # Get skill information
+        skills = db.get_emerging_skills()
+        skill = next((s for s in skills if s['skill_name'].lower().replace(' ', '-') == skill_name.lower().replace('-', ' ') 
+                     or s['skill_name'].lower() == skill_name.lower().replace('-', ' ')), None)
+        
+        if not skill:
+            return render_template('skill_not_found.html', skill_name=skill_name), 404
+        
+        # Get resources for this skill
+        resources = db.search_resources(query=skill['skill_name'], limit=50)
+        
+        # Group resources by type
+        grouped_resources = {}
+        for resource in resources:
+            res_type = resource['resource_type']
+            if res_type not in grouped_resources:
+                grouped_resources[res_type] = []
+            grouped_resources[res_type].append(resource)
+        
+        # Sort resources within each type by quality score
+        for res_type in grouped_resources:
+            grouped_resources[res_type].sort(key=lambda x: x['quality_score'], reverse=True)
+        
+        return render_template('skill_detail.html', 
+                             skill=skill, 
+                             resources=grouped_resources,
+                             total_resources=len(resources))
+        
+    except Exception as e:
+        logger.error(f"Error loading skill detail for {skill_name}: {e}")
+        return render_template('skill_not_found.html', skill_name=skill_name), 500
+
 @app.route('/api/sync')
 def api_sync_with_main_platform():
     """Sync with main AI-Horizon platform for latest intelligence"""
