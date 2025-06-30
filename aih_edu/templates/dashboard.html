@@ -252,9 +252,9 @@
         let currentDiscovery = null;
 
         // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            loadEmergingSkills();
-            updateStats();
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadEmergingSkills();
+            await updateStats();
         });
 
         // Load emerging skills from API
@@ -266,9 +266,7 @@
                 if (data.emerging_skills) {
                     emergingSkills = data.emerging_skills;
                     displaySkills(emergingSkills);
-                    updateStats();
-                    document.getElementById('last-updated').textContent = 
-                        new Date(data.last_updated).toLocaleTimeString();
+                    await updateStats();
                 } else {
                     showAlert('Error loading skills: ' + (data.error || 'Unknown error'), 'danger');
                 }
@@ -528,10 +526,23 @@
             }, 5000);
         }
 
-        function updateStats() {
+        async function updateStats() {
             document.getElementById('total-skills').textContent = emergingSkills.length;
-            document.getElementById('total-resources').textContent = '-'; // Updated after discovery
             document.getElementById('discovery-status').textContent = 'Ready';
+            
+            // Load actual resource count from database
+            try {
+                const response = await fetch('/api/database/stats');
+                const stats = await response.json();
+                document.getElementById('total-resources').textContent = stats.total_resources || 0;
+                
+                // Update last updated time
+                const now = new Date();
+                document.getElementById('last-updated').textContent = now.toLocaleTimeString();
+            } catch (error) {
+                console.error('Error loading database stats:', error);
+                document.getElementById('total-resources').textContent = '-';
+            }
         }
 
         function refreshData() {
