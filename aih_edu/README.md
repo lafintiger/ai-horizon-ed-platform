@@ -1,5 +1,29 @@
 # 🚀 AI-Horizon Ed: Educational Resource Curation Platform
 
+**🚀 Live Production Platform**: https://ed.theaihorizon.org/
+
+---
+
+## 🚨 **CRITICAL: PRE-DEMO PROTOCOL**
+
+**⚠️ ALWAYS CHECK DATABASE FIRST** - *Learned the Hard Way*
+
+Before ANY demo or presentation:
+```bash
+# 1. Check database status (should show ~37+ resources)
+curl https://ed.theaihorizon.org/api/database/stats
+
+# 2. If empty, run emergency restore
+./scripts/emergency_restore.sh
+
+# 3. Verify skill pages have content
+# Visit: https://ed.theaihorizon.org/skill/vibe-coding
+```
+
+**The educational resources ARE the money shot - without them, you have empty pages!**
+
+---
+
 > **Transform AI workforce intelligence into actionable learning paths for cybersecurity professionals**
 
 AI-Horizon Ed bridges the gap between workforce intelligence and education by automatically discovering and curating educational resources for emerging cybersecurity skills, powered by AI-driven analysis and real-time resource discovery.

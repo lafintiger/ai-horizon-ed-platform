@@ -1,4 +1,38 @@
-# AI-Horizon Ed: Comprehensive Program Specifications
+# AI-Horizon Ed Platform - Comprehensive Program Specifications
+## Production-Ready Educational Resource Curation System
+
+---
+
+## 🚨 **CRITICAL: PRE-DEMO PROTOCOL** 
+### ⚠️ **ALWAYS CHECK DATABASE FIRST** - *Learned the Hard Way*
+
+**THE EDUCATIONAL RESOURCES ARE THE MONEY SHOT - Everything else is secondary!**
+
+Before ANY demo, presentation, or handoff:
+
+1. **🔍 VERIFY DATABASE STATUS**: 
+   ```bash
+   curl https://ed.theaihorizon.org/api/database/stats
+   ```
+
+2. **⚡ EMERGENCY RESTORE IF EMPTY**: 
+   ```bash
+   ./scripts/emergency_restore.sh
+   ```
+
+3. **🎯 VERIFY CORE RESOURCES**: Check that skill pages show actual content:
+   - https://ed.theaihorizon.org/skill/vibe-coding
+   - https://ed.theaihorizon.org/skill/zero-trust-architecture
+   - https://ed.theaihorizon.org/skills (overview page)
+
+4. **🚀 CONFIRM FUNCTIONALITY**: Test that quality scores and resource types display properly
+
+**Without populated educational resources, the platform is just empty pages - completely useless for demonstrations!**
+
+---
+
+## Table of Contents
+
 ## Version 3.0 - Complete Implementation Status & Future Roadmap
 
 ### 🎯 **EXECUTIVE SUMMARY**

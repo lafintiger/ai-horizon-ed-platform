@@ -1,5 +1,19 @@
 # AI-Horizon Ed Development Checklist
 
+## 🚨 **CRITICAL: PRE-DEMO PROTOCOL**
+
+### ⚠️ **ALWAYS CHECK DATABASE FIRST** - *Learned the Hard Way*
+Before ANY demo or presentation:
+
+1. **🔍 VERIFY DATABASE STATUS**: `curl https://ed.theaihorizon.org/api/database/stats`
+2. **⚡ EMERGENCY RESTORE IF EMPTY**: Run `./scripts/emergency_restore.sh`
+3. **🎯 VERIFY CORE RESOURCES**: Check Vibe Coding page has content
+4. **🚀 CONFIRM FUNCTIONALITY**: Test skill detail pages show resources
+
+**The educational resources ARE the money shot - everything else is secondary!**
+
+---
+
 ## 🚀 Production Status: AI-Horizon Ed Platform
 
 ### ✅ COMPLETED - Foundation Ready
