@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Horizon Ed - Educational Resource Curation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .main-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .skill-card {
+            background: linear-gradient(135deg, #fff 0%, #f8f9ff 100%);
+            border-left: 4px solid #667eea;
+            margin-bottom: 1rem;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .urgency-badge {
+            font-size: 0.8rem;
+            font-weight: bold;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+        }
+        
+        .urgency-critical { background: #dc3545; color: white; }
+        .urgency-rising { background: #fd7e14; color: white; }
+        .urgency-emerging { background: #198754; color: white; }
+        .urgency-stable { background: #6c757d; color: white; }
+        
+        .discover-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 0.5rem 1.5rem;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .discover-btn:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .resource-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 3px solid #667eea;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .quality-score {
+            background: #198754;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hero-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: white;
+        }
+        
+        .stats-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg main-header">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-graduation-cap text-primary me-2"></i>
+                <strong>AI-Horizon Ed</strong>
+                <small class="text-muted ms-2">Educational Resource Curation</small>
+            </a>
+            <div class="ms-auto d-flex align-items-center">
+                <a href="/database" class="btn btn-outline-secondary me-3" target="_blank">
+                    <i class="fas fa-database me-1"></i> Browse Database
+                </a>
+                <span class="badge bg-success me-2">
+                    <i class="fas fa-circle"></i> Active
+                </span>
+                <button class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <h1><i class="fas fa-brain me-3"></i>Transform AI Insights into Learning Paths</h1>
+            <p class="lead mb-4">
+                Discover curated educational resources for emerging cybersecurity skills, 
+                powered by workforce intelligence and AI-driven resource discovery.
+            </p>
+            <div class="mb-4">
+                <a href="/database" class="btn btn-light btn-lg me-3" target="_blank">
+                    <i class="fas fa-database me-2"></i>Browse All Discovered Resources
+                </a>
+                <a href="#skills-container" class="btn btn-outline-light btn-lg">
+                    <i class="fas fa-search me-2"></i>Discover New Resources
+                </a>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="stats-card">
+                        <h3 id="total-skills" class="text-primary">-</h3>
+                        <small class="text-muted">Emerging Skills</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card">
+                        <h3 id="total-resources" class="text-success">-</h3>
+                        <small class="text-muted">Resources Found</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card">
+                        <h3 id="discovery-status" class="text-info">Ready</h3>
+                        <small class="text-muted">Discovery Engine</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card">
+                        <h3 id="last-updated" class="text-warning">-</h3>
+                        <small class="text-muted">Last Updated</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Emerging Skills Panel -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Emerging Skills (Live Intelligence)
+                        </h5>
+                    </div>
+                    <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                        <div id="skills-loading" class="text-center p-4">
+                            <div class="loading-spinner"></div>
+                            <p class="mt-3">Loading emerging skills...</p>
+                        </div>
+                        <div id="skills-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resource Discovery Panel -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-search me-2"></i>
+                            Resource Discovery
+                        </h5>
+                        <small id="discovery-info" class="opacity-75">Select a skill to discover resources</small>
+                    </div>
+                    <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                        <div id="resources-container">
+                            <div class="text-center text-muted p-5">
+                                <i class="fas fa-mouse-pointer fa-3x mb-3 opacity-50"></i>
+                                <h6>Click on any emerging skill to discover educational resources</h6>
+                                <p>We'll search YouTube, online courses, documentation, and tools to find the best learning materials.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Area -->
+        <div id="alert-container" class="mt-3"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center text-white mt-5 pb-3">
+        <small>
+            AI-Horizon Ed • Transforming workforce intelligence into educational opportunities • 
+            Powered by Perplexity AI & Claude
+        </small>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Global variables
+        let emergingSkills = [];
+        let currentDiscovery = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadEmergingSkills();
+            updateStats();
+        });
+
+        // Load emerging skills from API
+        async function loadEmergingSkills() {
+            try {
+                const response = await fetch('/api/skills/emerging');
+                const data = await response.json();
+                
+                if (data.emerging_skills) {
+                    emergingSkills = data.emerging_skills;
+                    displaySkills(emergingSkills);
+                    updateStats();
+                    document.getElementById('last-updated').textContent = 
+                        new Date(data.last_updated).toLocaleTimeString();
+                } else {
+                    showAlert('Error loading skills: ' + (data.error || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                console.error('Error loading skills:', error);
+                showAlert('Failed to load emerging skills. Please check your connection.', 'danger');
+            } finally {
+                document.getElementById('skills-loading').style.display = 'none';
+            }
+        }
+
+        // Display skills in the UI
+        function displaySkills(skills) {
+            const container = document.getElementById('skills-container');
+            
+            if (skills.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted p-4">
+                        <i class="fas fa-exclamation-circle fa-2x mb-3"></i>
+                        <h6>No emerging skills found</h6>
+                        <p>Check back later for updated intelligence.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = skills.map(skill => `
+                <div class="skill-card" onclick="discoverResources('${skill.skill_name}')">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="skill-title mb-1">${skill.skill_name}</h6>
+                        <span class="urgency-badge urgency-${skill.demand_trend}">
+                            ${skill.demand_trend.toUpperCase()}
+                        </span>
+                    </div>
+                    <p class="text-muted mb-2" style="font-size: 0.9rem;">${skill.description}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="fas fa-chart-bar me-1"></i>
+                            Urgency: ${(skill.urgency_score * 100).toFixed(0)}%
+                        </small>
+                        <button class="btn discover-btn btn-sm">
+                            <i class="fas fa-search me-1"></i>Discover Resources
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Discover resources for a skill
+        async function discoverResources(skillName) {
+            const container = document.getElementById('resources-container');
+            const infoElement = document.getElementById('discovery-info');
+            
+            // Update UI to show loading
+            container.innerHTML = `
+                <div class="text-center p-4">
+                    <div class="loading-spinner"></div>
+                    <h6 class="mt-3">Discovering resources for "${skillName}"...</h6>
+                    <p class="text-muted">This may take a few moments while we search for the best educational content.</p>
+                </div>
+            `;
+            
+            infoElement.textContent = `Searching for ${skillName} resources...`;
+            currentDiscovery = skillName;
+
+            try {
+                const response = await fetch(`/api/discover/${encodeURIComponent(skillName)}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.message || data.error);
+                }
+                
+                displayResources(data);
+                infoElement.textContent = `Found ${data.total_resources} resources for ${skillName}`;
+                
+                showAlert(`Successfully discovered ${data.total_resources} resources for ${skillName}!`, 'success');
+                
+            } catch (error) {
+                console.error('Error discovering resources:', error);
+                container.innerHTML = `
+                    <div class="text-center text-danger p-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <h6>Discovery Failed</h6>
+                        <p>${error.message}</p>
+                        <button class="btn btn-outline-primary" onclick="discoverResources('${skillName}')">
+                            <i class="fas fa-retry me-1"></i>Try Again
+                        </button>
+                    </div>
+                `;
+                infoElement.textContent = 'Discovery failed';
+                showAlert(`Failed to discover resources for ${skillName}: ${error.message}`, 'danger');
+            }
+        }
+
+        // Display discovered resources
+        function displayResources(data) {
+            const container = document.getElementById('resources-container');
+            const resources = data.resources;
+            
+            if (Object.keys(resources).length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted p-4">
+                        <i class="fas fa-search fa-2x mb-3"></i>
+                        <h6>No resources found</h6>
+                        <p>Try searching for a different skill.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `<h6 class="mb-3">Resources for "${data.skill}"</h6>`;
+            
+            Object.entries(resources).forEach(([type, items]) => {
+                if (items.length > 0) {
+                    html += `
+                        <div class="mb-4">
+                            <h6 class="text-primary">
+                                <i class="fas fa-${getResourceIcon(type)} me-2"></i>
+                                ${formatResourceType(type)} (${items.length})
+                            </h6>
+                            ${items.map(resource => `
+                                <div class="resource-card">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-1">
+                                            <a href="${resource.url}" target="_blank" class="text-decoration-none">
+                                                ${resource.title}
+                                            </a>
+                                        </h6>
+                                        <span class="quality-score">
+                                            ${(resource.quality_score * 100).toFixed(0)}%
+                                        </span>
+                                    </div>
+                                    <p class="text-muted mb-2" style="font-size: 0.9rem;">
+                                        ${resource.description}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-external-link-alt me-1"></i>
+                                            ${resource.source_platform || 'External'}
+                                            ${resource.author ? ` • ${resource.author}` : ''}
+                                            ${resource.duration_minutes ? ` • ${resource.duration_minutes}min` : ''}
+                                        </small>
+                                        <a href="${resource.url}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-external-link-alt me-1"></i>Open
+                                        </a>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Helper functions
+        function getResourceIcon(type) {
+            const icons = {
+                'youtube_video': 'play',
+                'online_course': 'graduation-cap',
+                'documentation': 'file-alt',
+                'tool': 'tools',
+                'article': 'newspaper',
+                'book': 'book'
+            };
+            return icons[type] || 'link';
+        }
+
+        function formatResourceType(type) {
+            return type.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alert-container');
+            const alertId = 'alert-' + Date.now();
+            
+            container.innerHTML = `
+                <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                const alert = document.getElementById(alertId);
+                if (alert) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
+            }, 5000);
+        }
+
+        function updateStats() {
+            document.getElementById('total-skills').textContent = emergingSkills.length;
+            document.getElementById('total-resources').textContent = '-'; // Updated after discovery
+            document.getElementById('discovery-status').textContent = 'Ready';
+        }
+
+        function refreshData() {
+            location.reload();
+        }
+    </script>
+</body>
+</html> 
