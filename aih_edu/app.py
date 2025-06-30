@@ -56,24 +56,73 @@ try:
 except Exception as e:
     print(f"❌ Failed to initialize resource discovery engine: {e}")
 
-# Background task management (in production, use Redis or database)
-discovery_tasks = {}
+# Background task management - File-based storage for persistence
+import json
+from pathlib import Path
+
+TASKS_FILE = Path('data/discovery_tasks.json')
+TASKS_FILE.parent.mkdir(exist_ok=True)
+
+def load_discovery_tasks():
+    """Load tasks from file"""
+    try:
+        if TASKS_FILE.exists():
+            with open(TASKS_FILE, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.warning(f"Failed to load tasks file: {e}")
+    return {}
+
+def save_discovery_tasks(tasks):
+    """Save tasks to file"""
+    try:
+        with open(TASKS_FILE, 'w') as f:
+            json.dump(tasks, f)
+    except Exception as e:
+        logger.warning(f"Failed to save tasks file: {e}")
+
+def get_discovery_task(task_id):
+    """Get a specific task"""
+    tasks = load_discovery_tasks()
+    return tasks.get(task_id)
+
+def update_discovery_task(task_id, task_data):
+    """Update a specific task"""
+    tasks = load_discovery_tasks()
+    tasks[task_id] = task_data
+    save_discovery_tasks(tasks)
+
+def delete_discovery_task(task_id):
+    """Delete a specific task"""
+    tasks = load_discovery_tasks()
+    if task_id in tasks:
+        del tasks[task_id]
+        save_discovery_tasks(tasks)
 
 def discover_resources_background(task_id, skill):
     """Background function to discover resources with progress tracking"""
     try:
-        discovery_tasks[task_id]['status'] = 'processing'
-        discovery_tasks[task_id]['progress'] = 10
-        discovery_tasks[task_id]['current_step'] = 'Starting resource discovery...'
+        # Update task status
+        task_data = get_discovery_task(task_id)
+        if not task_data:
+            logger.error(f"Task {task_id} not found when starting background processing")
+            return
+            
+        task_data['status'] = 'processing'
+        task_data['progress'] = 10
+        task_data['current_step'] = 'Starting resource discovery...'
+        update_discovery_task(task_id, task_data)
         
         if not discovery_engine:
-            discovery_tasks[task_id]['status'] = 'failed'
-            discovery_tasks[task_id]['error'] = 'Resource discovery engine not available'
+            task_data['status'] = 'failed'
+            task_data['error'] = 'Resource discovery engine not available'
+            update_discovery_task(task_id, task_data)
             return
         
         # Check for cached resources first
-        discovery_tasks[task_id]['progress'] = 20
-        discovery_tasks[task_id]['current_step'] = 'Checking for existing resources...'
+        task_data['progress'] = 20
+        task_data['current_step'] = 'Checking for existing resources...'
+        update_discovery_task(task_id, task_data)
         
         existing_resources = db.search_resources(query=skill, limit=20)
         if existing_resources and len(existing_resources) >= 5:
@@ -85,21 +134,23 @@ def discover_resources_background(task_id, skill):
                     grouped_resources[res_type] = []
                 grouped_resources[res_type].append(resource)
             
-            discovery_tasks[task_id]['status'] = 'completed'
-            discovery_tasks[task_id]['progress'] = 100
-            discovery_tasks[task_id]['current_step'] = 'Discovery completed (cached results)'
-            discovery_tasks[task_id]['results'] = {
+            task_data['status'] = 'completed'
+            task_data['progress'] = 100
+            task_data['current_step'] = 'Discovery completed (cached results)'
+            task_data['results'] = {
                 "skill": skill,
                 "resources": grouped_resources,
                 "total_resources": len(existing_resources),
                 "cached": True,
                 "discovery_timestamp": datetime.now().isoformat()
             }
+            update_discovery_task(task_id, task_data)
             return
         
         # Discover new resources
-        discovery_tasks[task_id]['progress'] = 30
-        discovery_tasks[task_id]['current_step'] = 'Discovering new resources...'
+        task_data['progress'] = 30
+        task_data['current_step'] = 'Discovering new resources...'
+        update_discovery_task(task_id, task_data)
         
         resource_types = ["youtube_videos", "online_courses", "documentation", "tools"]
         
@@ -114,18 +165,20 @@ def discover_resources_background(task_id, skill):
         finally:
             loop.close()
         
-        discovery_tasks[task_id]['progress'] = 70
-        discovery_tasks[task_id]['current_step'] = 'Storing discovered resources...'
+        task_data['progress'] = 70
+        task_data['current_step'] = 'Storing discovered resources...'
+        update_discovery_task(task_id, task_data)
         
         if not resources:
-            discovery_tasks[task_id]['status'] = 'completed'
-            discovery_tasks[task_id]['progress'] = 100
-            discovery_tasks[task_id]['results'] = {
+            task_data['status'] = 'completed'
+            task_data['progress'] = 100
+            task_data['results'] = {
                 "skill": skill,
                 "resources": {},
                 "total_resources": 0,
                 "error": "No resources discovered"
             }
+            update_discovery_task(task_id, task_data)
             return
         
         # Store resources
@@ -181,10 +234,10 @@ def discover_resources_background(task_id, skill):
             grouped_resources[res_type].append(resource)
         
         # Mark as completed
-        discovery_tasks[task_id]['status'] = 'completed'
-        discovery_tasks[task_id]['progress'] = 100
-        discovery_tasks[task_id]['current_step'] = 'Discovery completed successfully!'
-        discovery_tasks[task_id]['results'] = {
+        task_data['status'] = 'completed'
+        task_data['progress'] = 100
+        task_data['current_step'] = 'Discovery completed successfully!'
+        task_data['results'] = {
             "skill": skill,
             "resources": grouped_resources,
             "total_resources": len(resources),
@@ -192,11 +245,14 @@ def discover_resources_background(task_id, skill):
             "discovery_timestamp": datetime.now().isoformat(),
             "resource_types_searched": resource_types[:2]
         }
+        update_discovery_task(task_id, task_data)
         
     except Exception as e:
         logger.error(f"Error in background discovery for {skill}: {e}")
-        discovery_tasks[task_id]['status'] = 'failed'
-        discovery_tasks[task_id]['error'] = str(e)
+        task_data = get_discovery_task(task_id) or {}
+        task_data['status'] = 'failed'
+        task_data['error'] = str(e)
+        update_discovery_task(task_id, task_data)
 
 @app.route('/')
 def index():
@@ -305,13 +361,14 @@ def api_discover_resources(skill):
         
         # Start background discovery for new resources
         task_id = str(uuid.uuid4())
-        discovery_tasks[task_id] = {
+        task_data = {
             'status': 'started',
             'progress': 0,
             'current_step': 'Initializing resource discovery...',
             'skill': skill,
             'created_at': datetime.now().isoformat()
         }
+        update_discovery_task(task_id, task_data)
         
         # Start background thread
         thread = threading.Thread(
@@ -340,10 +397,34 @@ def api_discover_resources(skill):
 @app.route('/api/discover/status/<task_id>')
 def api_discovery_status(task_id):
     """Check the status of a resource discovery task"""
-    if task_id not in discovery_tasks:
-        return jsonify({"error": "Task not found"}), 404
+    task = get_discovery_task(task_id)
     
-    task = discovery_tasks[task_id]
+    if not task:
+        # Try to return cached resources if task not found
+        existing_resources = db.search_resources(query=task_id, limit=10)  # Try skill name as fallback
+        if existing_resources:
+            grouped_resources = {}
+            for resource in existing_resources:
+                res_type = resource['resource_type']
+                if res_type not in grouped_resources:
+                    grouped_resources[res_type] = []
+                grouped_resources[res_type].append(resource)
+            
+            return jsonify({
+                "task_id": task_id,
+                "status": "completed",
+                "progress": 100,
+                "current_step": "Found cached resources",
+                "results": {
+                    "skill": "Unknown",
+                    "resources": grouped_resources,
+                    "total_resources": len(existing_resources),
+                    "cached": True,
+                    "discovery_timestamp": datetime.now().isoformat()
+                }
+            })
+        
+        return jsonify({"error": "Task not found. The task may have expired or the server was restarted."}), 404
     
     response = {
         "task_id": task_id,
@@ -357,13 +438,11 @@ def api_discovery_status(task_id):
     if task['status'] == 'completed' and 'results' in task:
         response['results'] = task['results']
         # Clean up old task after returning results
-        if task_id in discovery_tasks:
-            del discovery_tasks[task_id]
+        delete_discovery_task(task_id)
     elif task['status'] == 'failed' and 'error' in task:
         response['error'] = task['error']
         # Clean up failed task
-        if task_id in discovery_tasks:
-            del discovery_tasks[task_id]
+        delete_discovery_task(task_id)
     
     return jsonify(response)
 
