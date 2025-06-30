@@ -605,13 +605,42 @@ def admin_panel():
         skills = db.get_emerging_skills()
         
         # Get discovery statistics
-        stats = db.get_resource_stats()
+        base_stats = db.get_resource_stats()
+        
+        # Get quality breakdown for admin panel
+        resources = db.search_resources(limit=1000)
+        quality_breakdown = {'high': 0, 'medium': 0, 'low': 0}
+        for resource in resources:
+            score = resource.get('quality_score', 0)
+            if score >= 0.8:
+                quality_breakdown['high'] += 1
+            elif score >= 0.5:
+                quality_breakdown['medium'] += 1
+            else:
+                quality_breakdown['low'] += 1
+        
+        # Combine stats for template
+        stats = {
+            'total_skills': len(skills),
+            'total_resources': base_stats.get('total_resources', 0),
+            'resources_by_quality': quality_breakdown,
+            'resources_by_type': base_stats.get('by_type', {}),
+            'average_quality': base_stats.get('average_quality', 0.0)
+        }
         
         return render_template('admin_panel.html', skills=skills, stats=stats)
         
     except Exception as e:
         logger.error(f"Error loading admin panel: {e}")
-        return render_template('admin_panel.html', skills=[], stats={})
+        # Provide safe fallback stats
+        fallback_stats = {
+            'total_skills': 0,
+            'total_resources': 0,
+            'resources_by_quality': {'high': 0, 'medium': 0, 'low': 0},
+            'resources_by_type': {},
+            'average_quality': 0.0
+        }
+        return render_template('admin_panel.html', skills=[], stats=fallback_stats)
 
 @app.route('/api/admin/add-skill', methods=['POST'])
 def api_add_skill():
