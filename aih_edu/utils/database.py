@@ -61,7 +61,18 @@ class DatabaseManager:
                     rating REAL DEFAULT 0.0,
                     review_count INTEGER DEFAULT 0,
                     prerequisites TEXT,  -- JSON array of prerequisites
-                    learning_outcomes TEXT  -- JSON array of outcomes
+                    learning_outcomes TEXT,  -- JSON array of outcomes
+                    
+                    -- Enhanced Learning Experience Fields
+                    difficulty_level TEXT DEFAULT 'unknown',  -- beginner|intermediate|advanced|expert
+                    cost_type TEXT DEFAULT 'unknown',         -- free|freemium|paid
+                    estimated_duration INTEGER DEFAULT 0,    -- minutes (more precise than duration_minutes)
+                    learning_objectives TEXT DEFAULT '[]',   -- AI-extracted learning goals (JSON)
+                    sequence_order INTEGER DEFAULT 0,        -- optimal learning order within skill
+                    ai_analysis_date TIMESTAMP,              -- when AI analysis was performed
+                    admin_reviewed BOOLEAN DEFAULT 0,        -- human-reviewed flag
+                    content_extracted TEXT,                  -- extracted content for AI analysis (JSON)
+                    source_platform TEXT                     -- youtube|coursera|udemy|github|etc
                 )
             ''')
             
@@ -186,6 +197,87 @@ class DatabaseManager:
                 )
             ''')
 
+            # AI-Generated Learning Content table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS learning_content (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    resource_id INTEGER REFERENCES educational_resources(id),
+                    skill_id INTEGER REFERENCES emerging_skills(id),
+                    content_type TEXT NOT NULL,  -- 'questions'|'projects'|'summary'|'objectives'
+                    content_data TEXT NOT NULL,  -- JSON with questions/projects/etc
+                    ai_model_used TEXT,          -- 'claude-3'|'gpt-4'|'combined'
+                    ai_generated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    admin_approved BOOLEAN DEFAULT 0,
+                    admin_modified TEXT DEFAULT NULL,  -- admin edits/additions (JSON)
+                    quality_score REAL DEFAULT 0.0,    -- quality of generated content
+                    usage_count INTEGER DEFAULT 0,     -- how often content is accessed
+                    feedback_rating REAL DEFAULT 0.0,  -- user feedback on content quality
+                    FOREIGN KEY (resource_id) REFERENCES educational_resources (id),
+                    FOREIGN KEY (skill_id) REFERENCES emerging_skills (id)
+                )
+            ''')
+            
+            # Enhanced Learning Paths for Skills
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS skill_learning_paths (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    skill_id INTEGER REFERENCES emerging_skills(id),
+                    path_name TEXT NOT NULL,  -- 'beginner'|'intermediate'|'advanced'|'expert'
+                    path_description TEXT,
+                    resource_sequence TEXT NOT NULL,  -- JSON array of resource IDs in optimal order
+                    estimated_duration INTEGER,       -- total minutes for path
+                    difficulty_progression TEXT,      -- JSON showing difficulty curve
+                    prerequisites TEXT DEFAULT '[]',  -- JSON array of required skills/knowledge
+                    learning_milestones TEXT DEFAULT '[]',  -- JSON array of checkpoints
+                    completion_projects TEXT DEFAULT '[]',  -- JSON array of final projects
+                    ai_generated BOOLEAN DEFAULT 1,
+                    admin_curated BOOLEAN DEFAULT 0,
+                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    usage_count INTEGER DEFAULT 0,
+                    completion_rate REAL DEFAULT 0.0,  -- percentage of users who complete
+                    FOREIGN KEY (skill_id) REFERENCES emerging_skills (id)
+                )
+            ''')
+            
+            # Learning Progress Tracking (Session-based for anonymous users)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS learning_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,  -- browser session or generated ID
+                    skill_id INTEGER REFERENCES emerging_skills(id),
+                    learning_path_id INTEGER REFERENCES skill_learning_paths(id),
+                    current_resource_id INTEGER REFERENCES educational_resources(id),
+                    resources_completed TEXT DEFAULT '[]',  -- JSON array of completed resource IDs
+                    questions_answered TEXT DEFAULT '{}',   -- JSON object of question responses
+                    projects_completed TEXT DEFAULT '[]',   -- JSON array of completed projects
+                    progress_percentage REAL DEFAULT 0.0,
+                    time_spent_minutes INTEGER DEFAULT 0,
+                    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    learning_preferences TEXT DEFAULT '{}', -- JSON object of user preferences
+                    FOREIGN KEY (skill_id) REFERENCES emerging_skills (id),
+                    FOREIGN KEY (learning_path_id) REFERENCES skill_learning_paths (id),
+                    FOREIGN KEY (current_resource_id) REFERENCES educational_resources (id)
+                )
+            ''')
+            
+            # Content Analysis Queue
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS content_analysis_queue (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    resource_id INTEGER REFERENCES educational_resources(id),
+                    analysis_type TEXT DEFAULT 'full',  -- 'full'|'update'|'questions_only'|'projects_only'
+                    priority INTEGER DEFAULT 1,         -- 1=high, 2=medium, 3=low
+                    status TEXT DEFAULT 'pending',      -- 'pending'|'processing'|'completed'|'failed'
+                    retry_count INTEGER DEFAULT 0,
+                    error_message TEXT,
+                    queued_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    started_date TIMESTAMP,
+                    completed_date TIMESTAMP,
+                    FOREIGN KEY (resource_id) REFERENCES educational_resources (id)
+                )
+            ''')
+
             # Create indexes for better performance
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_category ON educational_resources(skill_category)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_level ON educational_resources(learning_level)')
@@ -195,6 +287,20 @@ class DatabaseManager:
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_search_user ON search_history(user_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_emerging_skills_urgency ON emerging_skills(urgency_score)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_skill_mapping ON skill_resource_mapping(skill_id, resource_id)')
+            
+            # Enhanced Learning Experience Indexes
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_difficulty ON educational_resources(difficulty_level)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_cost ON educational_resources(cost_type)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_sequence ON educational_resources(sequence_order)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_ai_analyzed ON educational_resources(ai_analysis_date)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_learning_content_resource ON learning_content(resource_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_learning_content_skill ON learning_content(skill_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_learning_content_type ON learning_content(content_type)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_skill_paths_skill ON skill_learning_paths(skill_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_learning_sessions_session ON learning_sessions(session_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_learning_sessions_skill ON learning_sessions(skill_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_analysis_queue_status ON content_analysis_queue(status)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_analysis_queue_priority ON content_analysis_queue(priority)')
             
             conn.commit()
             logger.info("Educational resources database initialized successfully")
@@ -503,6 +609,338 @@ class DatabaseManager:
                 resources.append(resource)
             
             return resources
+
+    # =============================================================================
+    # ENHANCED LEARNING EXPERIENCE METHODS
+    # =============================================================================
+    
+    def update_resource_analysis(self, resource_id: int, analysis_data: Dict[str, Any]) -> None:
+        """Update resource with AI analysis results"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Convert complex data to JSON
+            learning_objectives = json.dumps(analysis_data.get('learning_objectives', []))
+            content_extracted = json.dumps(analysis_data.get('content_extracted', {}))
+            
+            cursor.execute('''
+                UPDATE educational_resources 
+                SET difficulty_level = ?, cost_type = ?, estimated_duration = ?,
+                    learning_objectives = ?, sequence_order = ?, ai_analysis_date = ?,
+                    content_extracted = ?, source_platform = ?
+                WHERE id = ?
+            ''', (
+                analysis_data.get('difficulty_level', 'unknown'),
+                analysis_data.get('cost_type', 'unknown'),
+                analysis_data.get('estimated_duration', 0),
+                learning_objectives,
+                analysis_data.get('sequence_order', 0),
+                datetime.now().isoformat(),
+                content_extracted,
+                analysis_data.get('source_platform', ''),
+                resource_id
+            ))
+            
+            conn.commit()
+            logger.info(f"Updated analysis for resource ID: {resource_id}")
+    
+    def add_learning_content(self, resource_id: int, skill_id: int, content_type: str, 
+                            content_data: Dict[str, Any], ai_model: str = 'claude-3') -> int:
+        """Add AI-generated learning content for a resource"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            content_json = json.dumps(content_data)
+            
+            cursor.execute('''
+                INSERT INTO learning_content
+                (resource_id, skill_id, content_type, content_data, ai_model_used)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (resource_id, skill_id, content_type, content_json, ai_model))
+            
+            content_id = cursor.lastrowid
+            conn.commit()
+            logger.info(f"Added {content_type} content for resource {resource_id}")
+            return content_id
+    
+    def get_learning_content(self, resource_id: int, content_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get learning content for a resource"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            if content_type:
+                cursor.execute('''
+                    SELECT * FROM learning_content 
+                    WHERE resource_id = ? AND content_type = ?
+                    ORDER BY ai_generated_date DESC
+                ''', (resource_id, content_type))
+            else:
+                cursor.execute('''
+                    SELECT * FROM learning_content 
+                    WHERE resource_id = ?
+                    ORDER BY content_type, ai_generated_date DESC
+                ''', (resource_id,))
+            
+            rows = cursor.fetchall()
+            content_list = []
+            for row in rows:
+                content = dict(row)
+                content['content_data'] = json.loads(content['content_data'])
+                content['admin_modified'] = json.loads(content['admin_modified'] or '{}')
+                content_list.append(content)
+            
+            return content_list
+    
+    def create_learning_path(self, skill_id: int, path_name: str, resource_sequence: List[int],
+                            path_data: Dict[str, Any]) -> int:
+        """Create a learning path for a skill"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Convert complex data to JSON
+            sequence_json = json.dumps(resource_sequence)
+            prerequisites = json.dumps(path_data.get('prerequisites', []))
+            milestones = json.dumps(path_data.get('learning_milestones', []))
+            projects = json.dumps(path_data.get('completion_projects', []))
+            difficulty_progression = json.dumps(path_data.get('difficulty_progression', {}))
+            
+            cursor.execute('''
+                INSERT INTO skill_learning_paths
+                (skill_id, path_name, path_description, resource_sequence, estimated_duration,
+                 difficulty_progression, prerequisites, learning_milestones, completion_projects)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                skill_id,
+                path_name,
+                path_data.get('path_description', ''),
+                sequence_json,
+                path_data.get('estimated_duration', 0),
+                difficulty_progression,
+                prerequisites,
+                milestones,
+                projects
+            ))
+            
+            path_id = cursor.lastrowid
+            conn.commit()
+            logger.info(f"Created learning path '{path_name}' for skill {skill_id}")
+            return path_id
+    
+    def get_learning_paths_for_skill(self, skill_id: int) -> List[Dict[str, Any]]:
+        """Get all learning paths for a skill"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT * FROM skill_learning_paths 
+                WHERE skill_id = ?
+                ORDER BY 
+                    CASE path_name 
+                        WHEN 'beginner' THEN 1
+                        WHEN 'intermediate' THEN 2
+                        WHEN 'advanced' THEN 3
+                        WHEN 'expert' THEN 4
+                        ELSE 5
+                    END
+            ''', (skill_id,))
+            
+            rows = cursor.fetchall()
+            paths = []
+            for row in rows:
+                path = dict(row)
+                path['resource_sequence'] = json.loads(path['resource_sequence'])
+                path['prerequisites'] = json.loads(path['prerequisites'] or '[]')
+                path['learning_milestones'] = json.loads(path['learning_milestones'] or '[]')
+                path['completion_projects'] = json.loads(path['completion_projects'] or '[]')
+                path['difficulty_progression'] = json.loads(path['difficulty_progression'] or '{}')
+                paths.append(path)
+            
+            return paths
+    
+    def get_enhanced_resources_for_skill(self, skill_id: int, difficulty_filter: Optional[str] = None,
+                                        cost_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get enhanced resources for a skill with filtering options"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Build dynamic query with filters
+            where_conditions = ["srm.skill_id = ?"]
+            params = [skill_id]
+            
+            if difficulty_filter:
+                where_conditions.append("er.difficulty_level = ?")
+                params.append(difficulty_filter)
+            
+            if cost_filter:
+                where_conditions.append("er.cost_type = ?")
+                params.append(cost_filter)
+            
+            where_clause = " AND ".join(where_conditions)
+            
+            cursor.execute(f'''
+                SELECT er.*, srm.relevance_score, srm.resource_type_for_skill
+                FROM educational_resources er
+                JOIN skill_resource_mapping srm ON er.id = srm.resource_id
+                WHERE {where_clause}
+                ORDER BY 
+                    er.sequence_order ASC,
+                    CASE er.difficulty_level 
+                        WHEN 'beginner' THEN 1
+                        WHEN 'intermediate' THEN 2
+                        WHEN 'advanced' THEN 3
+                        WHEN 'expert' THEN 4
+                        ELSE 5
+                    END,
+                    er.quality_score DESC
+            ''', params)
+            
+            rows = cursor.fetchall()
+            resources = []
+            for row in rows:
+                resource = dict(row)
+                # Parse JSON fields
+                resource['metadata'] = json.loads(resource['metadata'] or '{}')
+                resource['prerequisites'] = json.loads(resource['prerequisites'] or '[]')
+                resource['learning_outcomes'] = json.loads(resource['learning_outcomes'] or '[]')
+                resource['learning_objectives'] = json.loads(resource['learning_objectives'] or '[]')
+                resource['content_extracted'] = json.loads(resource['content_extracted'] or '{}')
+                resource['keywords'] = [k.strip() for k in resource['keywords'].split(',') if k.strip()]
+                
+                # Get associated learning content
+                resource['learning_content'] = self.get_learning_content(resource['id'])
+                
+                resources.append(resource)
+            
+            return resources
+    
+    def queue_content_analysis(self, resource_id: int, analysis_type: str = 'full', priority: int = 1) -> None:
+        """Queue a resource for AI content analysis"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO content_analysis_queue
+                (resource_id, analysis_type, priority, status)
+                VALUES (?, ?, ?, 'pending')
+            ''', (resource_id, analysis_type, priority))
+            
+            conn.commit()
+            logger.info(f"Queued resource {resource_id} for {analysis_type} analysis")
+    
+    def get_analysis_queue(self, status: str = 'pending', limit: int = 10) -> List[Dict[str, Any]]:
+        """Get resources queued for analysis"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT caq.*, er.title, er.url, er.resource_type
+                FROM content_analysis_queue caq
+                JOIN educational_resources er ON caq.resource_id = er.id
+                WHERE caq.status = ?
+                ORDER BY caq.priority ASC, caq.queued_date ASC
+                LIMIT ?
+            ''', (status, limit))
+            
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+    
+    def update_analysis_queue_status(self, queue_id: int, status: str, error_message: Optional[str] = None) -> None:
+        """Update analysis queue item status"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            if status == 'processing':
+                cursor.execute('''
+                    UPDATE content_analysis_queue 
+                    SET status = ?, started_date = ?
+                    WHERE id = ?
+                ''', (status, datetime.now().isoformat(), queue_id))
+            elif status == 'completed':
+                cursor.execute('''
+                    UPDATE content_analysis_queue 
+                    SET status = ?, completed_date = ?
+                    WHERE id = ?
+                ''', (status, datetime.now().isoformat(), queue_id))
+            elif status == 'failed':
+                cursor.execute('''
+                    UPDATE content_analysis_queue 
+                    SET status = ?, error_message = ?, retry_count = retry_count + 1
+                    WHERE id = ?
+                ''', (status, error_message, queue_id))
+            
+            conn.commit()
+    
+    def create_learning_session(self, session_id: str, skill_id: int, learning_path_id: Optional[int] = None) -> int:
+        """Create a new learning session for anonymous progress tracking"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT INTO learning_sessions
+                (session_id, skill_id, learning_path_id)
+                VALUES (?, ?, ?)
+            ''', (session_id, skill_id, learning_path_id))
+            
+            session_db_id = cursor.lastrowid
+            conn.commit()
+            logger.info(f"Created learning session {session_id} for skill {skill_id}")
+            return session_db_id
+    
+    def update_learning_progress(self, session_id: str, progress_data: Dict[str, Any]) -> None:
+        """Update learning progress for a session"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Convert lists/dicts to JSON
+            resources_completed = json.dumps(progress_data.get('resources_completed', []))
+            questions_answered = json.dumps(progress_data.get('questions_answered', {}))
+            projects_completed = json.dumps(progress_data.get('projects_completed', []))
+            learning_preferences = json.dumps(progress_data.get('learning_preferences', {}))
+            
+            cursor.execute('''
+                UPDATE learning_sessions 
+                SET current_resource_id = ?, resources_completed = ?, questions_answered = ?,
+                    projects_completed = ?, progress_percentage = ?, time_spent_minutes = ?,
+                    last_activity = ?, learning_preferences = ?
+                WHERE session_id = ?
+            ''', (
+                progress_data.get('current_resource_id'),
+                resources_completed,
+                questions_answered,
+                projects_completed,
+                progress_data.get('progress_percentage', 0.0),
+                progress_data.get('time_spent_minutes', 0),
+                datetime.now().isoformat(),
+                learning_preferences,
+                session_id
+            ))
+            
+            conn.commit()
+    
+    def get_learning_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Get learning session data"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT * FROM learning_sessions WHERE session_id = ?
+            ''', (session_id,))
+            
+            row = cursor.fetchone()
+            if row:
+                session = dict(row)
+                session['resources_completed'] = json.loads(session['resources_completed'] or '[]')
+                session['questions_answered'] = json.loads(session['questions_answered'] or '{}')
+                session['projects_completed'] = json.loads(session['projects_completed'] or '[]')
+                session['learning_preferences'] = json.loads(session['learning_preferences'] or '{}')
+                return session
+            
+            return None
 
 # Global database instance
 db_manager = DatabaseManager() 

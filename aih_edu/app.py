@@ -1036,41 +1036,203 @@ def skills_overview():
 
 @app.route('/skill/<skill_name>')
 def skill_detail(skill_name):
-    """Detailed skill page with summary and curated resources"""
+    """Enhanced skill page with comprehensive learning experience"""
     try:
-        # Get skill information
-        skills = db.get_emerging_skills()
+        from .utils.learning_experience_service import learning_service
+        
+        # Get session ID from query params or create new one
+        session_id = request.args.get('session_id')
+        difficulty_filter = request.args.get('difficulty')
+        cost_filter = request.args.get('cost')
+        
         # Convert URL format back to skill name (replace dashes with spaces, handle &)
-        target_name = skill_name.lower().replace('-', ' ').replace('and', '&')
-        skill = next((s for s in skills if s['skill_name'].lower() == target_name 
-                     or s['skill_name'].lower().replace(' ', '-').replace('&', 'and') == skill_name.lower()), None)
+        target_skill_name = skill_name.lower().replace('-', ' ').replace('and', '&')
         
-        if not skill:
-            return render_template('skill_not_found.html', skill_name=skill_name), 404
+        # Get comprehensive learning experience
+        learning_experience = learning_service.get_skill_learning_experience(
+            target_skill_name, session_id, difficulty_filter, cost_filter
+        )
         
-        # Get resources for this skill
-        resources = db.search_resources(query=skill['skill_name'], limit=50)
-        
-        # Group resources by type
-        grouped_resources = {}
-        for resource in resources:
-            res_type = resource['resource_type']
-            if res_type not in grouped_resources:
-                grouped_resources[res_type] = []
-            grouped_resources[res_type].append(resource)
-        
-        # Sort resources within each type by quality score
-        for res_type in grouped_resources:
-            grouped_resources[res_type].sort(key=lambda x: x['quality_score'], reverse=True)
+        # Queue resources for analysis if not already analyzed
+        unanalyzed_count = sum(1 for r in learning_experience['resources'] 
+                              if not r.get('ai_analysis_date'))
+        if unanalyzed_count > 0:
+            learning_service.queue_skill_for_analysis(target_skill_name, priority=1)
         
         return render_template('skill_detail.html', 
-                             skill=skill, 
-                             resources=grouped_resources,
-                             total_resources=len(resources))
+                             skill=learning_experience['skill'],
+                             session_id=learning_experience['session_id'],
+                             learning_paths=learning_experience['learning_paths'],
+                             resources=learning_experience['resources'],
+                             resource_categories=learning_experience['resource_categories'],
+                             learning_stats=learning_experience['learning_stats'],
+                             progress=learning_experience['progress'],
+                             filters=learning_experience['filters'],
+                             recommendations=learning_experience['recommendations'],
+                             unanalyzed_count=unanalyzed_count,
+                             total_resources=len(learning_experience['resources']))
+        
+    except ValueError as e:
+        logger.warning(f"Skill not found: {skill_name} - {e}")
+        return render_template('skill_not_found.html', skill_name=skill_name), 404
+    except Exception as e:
+        logger.error(f"Error loading enhanced skill detail for {skill_name}: {e}")
+        return render_template('skill_not_found.html', skill_name=skill_name), 500
+
+# =============================================================================
+# ENHANCED LEARNING EXPERIENCE API ENDPOINTS
+# =============================================================================
+
+@app.route('/api/learning/progress', methods=['POST'])
+def api_update_learning_progress():
+    """Update learning progress for a session"""
+    try:
+        from .utils.learning_experience_service import learning_service
+        
+        data = request.get_json()
+        session_id = data.get('session_id')
+        
+        if not session_id:
+            return jsonify({'error': 'Session ID required'}), 400
+        
+        progress_update = {
+            'current_resource_id': data.get('current_resource_id'),
+            'new_completed_resources': data.get('completed_resources', []),
+            'additional_time': data.get('time_spent', 0),
+            'learning_preferences': data.get('preferences', {})
+        }
+        
+        updated_progress = learning_service.update_learning_progress(session_id, progress_update)
+        
+        return jsonify({
+            'success': True,
+            'progress': updated_progress
+        })
         
     except Exception as e:
-        logger.error(f"Error loading skill detail for {skill_name}: {e}")
-        return render_template('skill_not_found.html', skill_name=skill_name), 500
+        logger.error(f"Error updating learning progress: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/learning/questions/answer', methods=['POST'])
+def api_answer_question():
+    """Process a comprehension question answer"""
+    try:
+        from .utils.learning_experience_service import learning_service
+        
+        data = request.get_json()
+        session_id = data.get('session_id')
+        resource_id = data.get('resource_id')
+        question_id = data.get('question_id')
+        answer = data.get('answer')
+        
+        if not all([session_id, resource_id, question_id, answer]):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        result = learning_service.answer_comprehension_question(
+            session_id, resource_id, question_id, answer
+        )
+        
+        return jsonify({
+            'success': True,
+            'result': result
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing question answer: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/learning/projects/complete', methods=['POST'])
+def api_complete_project():
+    """Mark a project as completed"""
+    try:
+        from .utils.learning_experience_service import learning_service
+        
+        data = request.get_json()
+        session_id = data.get('session_id')
+        resource_id = data.get('resource_id')
+        project_id = data.get('project_id')
+        completion_data = data.get('completion_data', {})
+        
+        if not all([session_id, resource_id, project_id]):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        result = learning_service.complete_project(
+            session_id, resource_id, project_id, completion_data
+        )
+        
+        return jsonify({
+            'success': True,
+            'result': result
+        })
+        
+    except Exception as e:
+        logger.error(f"Error completing project: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/learning/resource/<int:resource_id>/content')
+def api_get_resource_content(resource_id):
+    """Get enhanced learning content for a resource"""
+    try:
+        from .utils.learning_experience_service import learning_service
+        
+        content_type = request.args.get('type')  # 'questions', 'projects', 'summary', etc.
+        
+        content = learning_service.get_resource_learning_content(resource_id, content_type)
+        
+        return jsonify({
+            'success': True,
+            'content': content
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting resource content: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/analyze-skill', methods=['POST'])
+@require_auth
+def api_analyze_skill():
+    """Queue a skill for comprehensive AI analysis"""
+    try:
+        from .utils.learning_experience_service import learning_service
+        
+        data = request.get_json()
+        skill_name = data.get('skill_name')
+        priority = data.get('priority', 1)
+        
+        if not skill_name:
+            return jsonify({'error': 'Skill name required'}), 400
+        
+        result = learning_service.queue_skill_for_analysis(skill_name, priority)
+        
+        return jsonify({
+            'success': True,
+            'result': result
+        })
+        
+    except Exception as e:
+        logger.error(f"Error queuing skill for analysis: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/process-analysis-queue', methods=['POST'])
+@require_auth
+def api_process_analysis_queue():
+    """Process queued analysis tasks"""
+    try:
+        from .utils.learning_experience_service import learning_service
+        
+        data = request.get_json()
+        batch_size = data.get('batch_size', 5)
+        
+        result = learning_service.process_analysis_queue(batch_size)
+        
+        return jsonify({
+            'success': True,
+            'result': result
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing analysis queue: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/sync')
 def api_sync_with_main_platform():
