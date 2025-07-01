@@ -37,6 +37,12 @@ from utils.config import config
 from utils.database import DatabaseManager
 from discover.resource_discovery import get_discovery_engine
 
+# Authentication imports
+from flask import session, url_for, flash
+from functools import wraps
+from datetime import datetime, timedelta
+import hashlib
+
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = config.get('SECRET_KEY')
@@ -46,13 +52,22 @@ CORS(app)
 @app.before_request
 def force_https():
     """Redirect HTTP requests to HTTPS in production"""
-    # Only enforce HTTPS in production (when not running locally)
-    if not app.debug and not request.is_secure:
-        # Check if we're on Heroku or have a custom domain
-        if request.headers.get('X-Forwarded-Proto', 'http') != 'https':
-            # Get the full URL and replace http with https
-            url = request.url.replace('http://', 'https://', 1)
-            return redirect(url, code=301)
+    # Skip HTTPS enforcement completely for local development
+    if (request.remote_addr in ['127.0.0.1', 'localhost'] or 
+        request.host.startswith('127.0.0.1') or 
+        request.host.startswith('localhost') or
+        '127.0.0.1' in request.host or
+        'localhost' in request.host or
+        app.debug or 
+        os.environ.get('FLASK_ENV') == 'development' or
+        config.get('FLASK_ENV') == 'development'):
+        return None
+    
+    # Only enforce HTTPS in production (Heroku/custom domain)
+    if not request.is_secure and request.headers.get('X-Forwarded-Proto', 'http') != 'https':
+        # Get the full URL and replace http with https
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
 
 # Security headers for HTTPS
 @app.after_request
@@ -86,6 +101,31 @@ try:
         print("⚠️  Resource discovery engine not available (missing API keys)")
 except Exception as e:
     print(f"❌ Failed to initialize resource discovery engine: {e}")
+
+# =============================================================================
+# AUTHENTICATION SYSTEM
+# =============================================================================
+
+def hash_password(password):
+    """Hash a password for storing"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password, hashed):
+    """Verify a password against its hash"""
+    return hash_password(password) == hashed
+
+def is_authenticated():
+    """Check if user is authenticated"""
+    return session.get('authenticated', False)
+
+def require_auth(f):
+    """Decorator to require authentication for admin routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not is_authenticated():
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Background task management - File-based storage for persistence
 import json
@@ -598,6 +638,7 @@ def database_browser():
     return render_template('database_browser.html')
 
 @app.route('/admin')
+@require_auth
 def admin_panel():
     """Admin panel for managing skills and discovery"""
     try:
@@ -643,6 +684,7 @@ def admin_panel():
         return render_template('admin_panel.html', skills=[], stats=fallback_stats)
 
 @app.route('/api/admin/add-skill', methods=['POST'])
+@require_auth
 def api_add_skill():
     """Add a new skill for discovery"""
     try:
@@ -686,6 +728,7 @@ def api_add_skill():
         return jsonify({"error": "Failed to add skill"}), 500
 
 @app.route('/api/admin/bulk-discover', methods=['POST'])
+@require_auth
 def api_bulk_discover():
     """Trigger discovery for multiple skills"""
     try:
@@ -735,36 +778,32 @@ def api_bulk_discover():
 
 @app.route('/skills')
 def skills_overview():
-    """Learn More page - overview of all skills with learning paths"""
+    """Display overview of all emerging skills with learn-more links"""
     try:
-        # Get all emerging skills
-        skills = db.get_emerging_skills()
+        # Get all skills from database
+        skills = db.get_all_skills()
         
-        # Get resource counts for each skill
-        skills_with_resources = []
+        # Calculate statistics for each skill
+        skill_stats = []
         for skill in skills:
-            resources = db.search_resources(query=skill['skill_name'], limit=100)
-            
-            # Group resources by type for display
-            grouped_resources = {}
-            for resource in resources:
-                res_type = resource['resource_type']
-                if res_type not in grouped_resources:
-                    grouped_resources[res_type] = []
-                grouped_resources[res_type].append(resource)
-            
-            skill['resource_count'] = len(resources)
-            skill['resource_types'] = list(grouped_resources.keys())
-            skills_with_resources.append(skill)
+            skill_data = {
+                'skill': skill,
+                'resource_count': len(db.get_resources_for_skill(skill['id'])),
+                'learn_more_url': f"/skill/{skill['skill_name'].lower().replace(' ', '-').replace('&', 'and')}"
+            }
+            skill_stats.append(skill_data)
         
-        # Sort by urgency score
-        skills_with_resources.sort(key=lambda x: x['urgency_score'], reverse=True)
+        # Get overall platform statistics
+        total_skills = len(skills)
+        total_resources = len(db.get_all_resources())
         
-        return render_template('skills_overview.html', skills=skills_with_resources)
-        
+        return render_template('skills_overview.html', 
+                             skills=skill_stats,
+                             total_skills=total_skills,
+                             total_resources=total_resources)
     except Exception as e:
-        logger.error(f"Error loading skills overview: {e}")
-        return render_template('skills_overview.html', skills=[])
+        logger.error(f"Error in skills overview: {e}")
+        return render_template('skill_not_found.html'), 500
 
 @app.route('/skill/<skill_name>')
 def skill_detail(skill_name):
@@ -772,8 +811,10 @@ def skill_detail(skill_name):
     try:
         # Get skill information
         skills = db.get_emerging_skills()
-        skill = next((s for s in skills if s['skill_name'].lower().replace(' ', '-') == skill_name.lower().replace('-', ' ') 
-                     or s['skill_name'].lower() == skill_name.lower().replace('-', ' ')), None)
+        # Convert URL format back to skill name (replace dashes with spaces, handle &)
+        target_name = skill_name.lower().replace('-', ' ').replace('and', '&')
+        skill = next((s for s in skills if s['skill_name'].lower() == target_name 
+                     or s['skill_name'].lower().replace(' ', '-').replace('&', 'and') == skill_name.lower()), None)
         
         if not skill:
             return render_template('skill_not_found.html', skill_name=skill_name), 404
@@ -813,6 +854,39 @@ def api_sync_with_main_platform():
         "resources_updated": 15,
         "last_sync": "2025-06-30T00:00:00Z"
     })
+
+# =============================================================================
+# AUTHENTICATION ROUTES
+# =============================================================================
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Admin login page"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # Get credentials from config
+        admin_creds = config.get_admin_credentials()
+        
+        if (username == admin_creds['username'] and 
+            verify_password(password, hash_password(admin_creds['password']))):
+            session['authenticated'] = True
+            session['username'] = username
+            session['login_time'] = datetime.now().isoformat()
+            flash('Successfully logged in!', 'success')
+            return redirect(url_for('admin_panel'))
+        else:
+            flash('Invalid username or password', 'error')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Logout and clear session"""
+    session.clear()
+    flash('Successfully logged out!', 'success')
+    return redirect(url_for('index'))
 
 def create_app():
     """Application factory"""
