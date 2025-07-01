@@ -733,6 +733,235 @@ def api_bulk_discover():
         logger.error(f"Error starting bulk discovery: {e}")
         return jsonify({"error": "Failed to start bulk discovery"}), 500
 
+@app.route('/api/admin/import-forecast', methods=['POST'])
+def api_import_forecast():
+    """Import AI-Horizon forecast data and create skills"""
+    try:
+        data = request.get_json()
+        forecast_text = data.get('forecast_text', '').strip()
+        
+        if not forecast_text:
+            return jsonify({"error": "No forecast data provided"}), 400
+        
+        # Parse the forecast data
+        parsed_skills = parse_forecast_data(forecast_text)
+        
+        if not parsed_skills:
+            return jsonify({"error": "No skills could be extracted from forecast data"}), 400
+        
+        # Preview mode - just return what would be created
+        if data.get('preview_only', False):
+            return jsonify({
+                "success": True,
+                "preview": True,
+                "skills_found": len(parsed_skills),
+                "skills": parsed_skills
+            })
+        
+        # Import mode - actually create the skills
+        created_skills = []
+        updated_skills = []
+        existing_skills = db.get_emerging_skills()
+        existing_skill_names = [s['skill_name'].lower() for s in existing_skills]
+        
+        for skill_data in parsed_skills:
+            skill_name_lower = skill_data['skill_name'].lower()
+            
+            # Check if skill already exists
+            if skill_name_lower in existing_skill_names:
+                # Update existing skill with new forecast data
+                updated_skills.append(skill_data['skill_name'])
+                # TODO: Add update_emerging_skill method to database.py
+                logger.info(f"Skill '{skill_data['skill_name']}' already exists - would update with new forecast data")
+            else:
+                # Create new skill
+                skill_data['source_analysis'] = 'ai_horizon_forecast_import'
+                skill_id = db.add_emerging_skill(skill_data)
+                created_skills.append({
+                    'skill_name': skill_data['skill_name'],
+                    'skill_id': skill_id
+                })
+        
+        # Start discovery for all new skills
+        discovery_tasks = []
+        for skill in created_skills:
+            task_id = str(uuid.uuid4())
+            task_data = {
+                'task_id': task_id,
+                'skill': skill['skill_name'],
+                'status': 'pending',
+                'progress': 0,
+                'created_at': datetime.now().isoformat()
+            }
+            
+            update_discovery_task(task_id, task_data)
+            
+            # Start background discovery
+            threading.Thread(
+                target=discover_resources_background,
+                args=(task_id, skill['skill_name']),
+                daemon=True
+            ).start()
+            
+            discovery_tasks.append({
+                'skill': skill['skill_name'],
+                'task_id': task_id
+            })
+        
+        return jsonify({
+            "success": True,
+            "message": f"Imported {len(created_skills)} new skills from forecast",
+            "created_skills": len(created_skills),
+            "updated_skills": len(updated_skills),
+            "skills": created_skills,
+            "discovery_tasks": discovery_tasks
+        })
+        
+    except Exception as e:
+        logger.error(f"Error importing forecast: {e}")
+        return jsonify({"error": f"Failed to import forecast: {str(e)}"}), 500
+
+def parse_forecast_data(forecast_text):
+    """Parse AI-Horizon forecast data and extract skill information"""
+    import re
+    import json
+    
+    skills = []
+    
+    try:
+        # Try to parse as JSON first
+        if forecast_text.strip().startswith('{') or forecast_text.strip().startswith('['):
+            forecast_data = json.loads(forecast_text)
+            
+            # Handle different JSON structures
+            if isinstance(forecast_data, list):
+                for item in forecast_data:
+                    skill = extract_skill_from_json(item)
+                    if skill:
+                        skills.append(skill)
+            elif isinstance(forecast_data, dict):
+                # Handle nested structures
+                if 'emerging_skills' in forecast_data:
+                    for skill_data in forecast_data['emerging_skills']:
+                        skill = extract_skill_from_json(skill_data)
+                        if skill:
+                            skills.append(skill)
+                elif 'skills' in forecast_data:
+                    for skill_data in forecast_data['skills']:
+                        skill = extract_skill_from_json(skill_data)
+                        if skill:
+                            skills.append(skill)
+                else:
+                    # Try to extract from top-level object
+                    skill = extract_skill_from_json(forecast_data)
+                    if skill:
+                        skills.append(skill)
+    
+    except json.JSONDecodeError:
+        # Parse as text using patterns
+        skills = parse_forecast_text(forecast_text)
+    
+    return skills
+
+def extract_skill_from_json(data):
+    """Extract skill information from JSON object"""
+    if not isinstance(data, dict):
+        return None
+    
+    # Look for skill name in various fields
+    skill_name = (data.get('skill_name') or 
+                 data.get('skill') or 
+                 data.get('name') or 
+                 data.get('title'))
+    
+    if not skill_name:
+        return None
+    
+    # Extract other fields with defaults
+    description = (data.get('description') or 
+                  data.get('summary') or 
+                  data.get('overview') or 
+                  f"Skill identified from AI-Horizon forecast: {skill_name}")
+    
+    # Map category variations
+    category = data.get('category', 'cybersecurity')
+    category_map = {
+        'cyber': 'cybersecurity',
+        'security': 'cybersecurity', 
+        'ai': 'ai_security',
+        'cloud': 'cloud_security',
+        'programming': 'programming',
+        'development': 'programming'
+    }
+    category = category_map.get(category.lower(), category)
+    
+    # Extract urgency/priority score
+    urgency_score = 0.7  # Default
+    if 'urgency' in data:
+        urgency_score = float(data['urgency'])
+    elif 'priority' in data:
+        urgency_score = float(data['priority'])
+    elif 'score' in data:
+        urgency_score = float(data['score'])
+    elif 'importance' in data:
+        urgency_score = float(data['importance'])
+    
+    # Normalize to 0-1 range
+    if urgency_score > 1:
+        urgency_score = urgency_score / 100.0
+    urgency_score = max(0.0, min(1.0, urgency_score))
+    
+    # Extract trend
+    trend = data.get('trend', 'emerging')
+    if urgency_score >= 0.9:
+        trend = 'critical'
+    elif urgency_score >= 0.8:
+        trend = 'rising'
+    elif urgency_score >= 0.6:
+        trend = 'emerging'
+    else:
+        trend = 'stable'
+    
+    return {
+        'skill_name': skill_name.strip(),
+        'description': description.strip()[:500],  # Limit length
+        'category': category,
+        'urgency_score': urgency_score,
+        'demand_trend': trend,
+        'related_skills': data.get('related_skills', [])
+    }
+
+def parse_forecast_text(text):
+    """Parse forecast data from text format"""
+    import re
+    
+    skills = []
+    
+    # Common patterns for skill extraction
+    patterns = [
+        r'(?:skill|technology|capability):\s*([^.\n]+)',
+        r'(?:emerging|new|critical):\s*([^.\n]+)',
+        r'•\s*([^.\n]+)',
+        r'-\s*([^.\n]+)',
+        r'\d+\.\s*([^.\n]+)'
+    ]
+    
+    for pattern in patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for match in matches:
+            skill_name = match.strip()
+            if len(skill_name) > 5 and skill_name not in [s['skill_name'] for s in skills]:
+                skills.append({
+                    'skill_name': skill_name,
+                    'description': f"Skill extracted from AI-Horizon forecast: {skill_name}",
+                    'category': 'cybersecurity',
+                    'urgency_score': 0.7,
+                    'demand_trend': 'emerging',
+                    'related_skills': []
+                })
+    
+    return skills[:10]  # Limit to 10 skills to avoid overwhelming
+
 @app.route('/skills')
 def skills_overview():
     """Learn More page - overview of all skills with learning paths"""
