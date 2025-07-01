@@ -77,6 +77,11 @@ class Config:
             'FLASK_ENV': os.getenv('FLASK_ENV', 'development'),
             'PORT': int(os.getenv('PORT', '9000')),
             
+            # Admin Authentication
+            'ADMIN_USERNAME': os.getenv('ADMIN_USERNAME', 'admin'),
+            'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD', 'ai-horizon-admin-2025'),
+            'SESSION_TIMEOUT_MINUTES': int(os.getenv('SESSION_TIMEOUT_MINUTES', '120')),
+            
             # Content Filtering
             'CONTENT_FILTERS': {
                 'min_duration_seconds': 300,  # 5 minutes minimum for videos
@@ -125,6 +130,17 @@ class Config:
             'url': self.get('DATABASE_URL'),
             'pool_size': self.get('DATABASE_POOL_SIZE')
         }
+    
+    def get_admin_credentials(self) -> Dict[str, str]:
+        """Get admin authentication credentials"""
+        return {
+            'username': self.get('ADMIN_USERNAME'),
+            'password': self.get('ADMIN_PASSWORD')
+        }
+    
+    def get_session_timeout(self) -> int:
+        """Get session timeout in minutes"""
+        return self.get('SESSION_TIMEOUT_MINUTES')
 
 # Global configuration instance
 config = Config() 
