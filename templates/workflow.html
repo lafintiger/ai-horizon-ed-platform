@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow - AI-Horizon Ed</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+        
+        .workflow-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            color: #333;
+            margin: 2rem auto;
+            max-width: 1200px;
+            padding: 3rem;
+        }
+        
+        .workflow-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .workflow-step {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-left: 5px solid #667eea;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .workflow-step:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .step-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .process-flow {
+            display: flex;
+            align-items: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .flow-arrow {
+            font-size: 2rem;
+            color: #667eea;
+            margin: 0 1rem;
+        }
+        
+        .flow-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 150px;
+            margin: 0.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            color: white;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="workflow-container">
+            <!-- Header -->
+            <div class="workflow-header">
+                <h1 class="display-4 mb-3">
+                    <i class="fas fa-cogs me-3"></i>
+                    AI-Horizon Ed Workflow
+                </h1>
+                <p class="lead">
+                    Transforming Workforce Intelligence into Educational Opportunities
+                </p>
+                <p class="text-muted">
+                    Our systematic approach to identifying emerging skills and curating world-class learning resources
+                </p>
+                
+                <!-- Navigation -->
+                <div class="mt-4">
+                    <a href="/" class="nav-button">
+                        <i class="fas fa-home me-2"></i>Dashboard
+                    </a>
+                    <a href="/methodology" class="nav-button">
+                        <i class="fas fa-microscope me-2"></i>Methodology
+                    </a>
+                    <a href="/skills" class="nav-button">
+                        <i class="fas fa-graduation-cap me-2"></i>Skills Overview
+                    </a>
+                </div>
+            </div>
+
+            <!-- Process Flow Overview -->
+            <div class="row mb-5">
+                <div class="col-12">
+                    <h2 class="text-center mb-4">
+                        <i class="fas fa-project-diagram me-2"></i>
+                        End-to-End Process Flow
+                    </h2>
+                    <div class="process-flow">
+                        <div class="flow-box">
+                            <i class="fas fa-chart-line fa-2x mb-2"></i>
+                            <div>Workforce Intelligence</div>
+                        </div>
+                        <i class="fas fa-arrow-right flow-arrow"></i>
+                        <div class="flow-box">
+                            <i class="fas fa-brain fa-2x mb-2"></i>
+                            <div>AI Analysis</div>
+                        </div>
+                        <i class="fas fa-arrow-right flow-arrow"></i>
+                        <div class="flow-box">
+                            <i class="fas fa-search fa-2x mb-2"></i>
+                            <div>Resource Discovery</div>
+                        </div>
+                        <i class="fas fa-arrow-right flow-arrow"></i>
+                        <div class="flow-box">
+                            <i class="fas fa-star fa-2x mb-2"></i>
+                            <div>Quality Assessment</div>
+                        </div>
+                        <i class="fas fa-arrow-right flow-arrow"></i>
+                        <div class="flow-box">
+                            <i class="fas fa-graduation-cap fa-2x mb-2"></i>
+                            <div>Learning Paths</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Workflow Steps -->
+            <div class="row">
+                <div class="col-12">
+                    <h2 class="mb-4">
+                        <i class="fas fa-list-ol me-2"></i>
+                        Detailed Workflow Steps
+                    </h2>
+                </div>
+            </div>
+
+            <!-- Step 1: Intelligence Gathering -->
+            <div class="workflow-step">
+                <div class="step-number">1</div>
+                <h3><i class="fas fa-satellite-dish me-2"></i>Workforce Intelligence Gathering</h3>
+                <p><strong>Source:</strong> Main AI-Horizon Platform Analysis</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Data Sources:</h5>
+                        <ul>
+                            <li>Job market trend analysis</li>
+                            <li>Industry skill gap assessments</li>
+                            <li>Technology adoption forecasts</li>
+                            <li>Cybersecurity threat landscape evolution</li>
+                            <li>Professional certification requirements</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Intelligence Outputs:</h5>
+                        <ul>
+                            <li>Emerging skill identification</li>
+                            <li>Urgency scoring (0-100%)</li>
+                            <li>Market demand predictions</li>
+                            <li>Skill categorization</li>
+                            <li>Learning priority matrix</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Skill Analysis -->
+            <div class="workflow-step">
+                <div class="step-number">2</div>
+                <h3><i class="fas fa-microscope me-2"></i>AI-Powered Skill Analysis</h3>
+                <p><strong>Process:</strong> Deep analysis of identified emerging skills</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Analysis Components:</h5>
+                        <ul>
+                            <li>Skill complexity assessment</li>
+                            <li>Prerequisite mapping</li>
+                            <li>Learning pathway design</li>
+                            <li>Industry relevance scoring</li>
+                            <li>Career impact evaluation</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>AI Technologies Used:</h5>
+                        <ul>
+                            <li>Claude-3 for content analysis</li>
+                            <li>GPT-4 for skill decomposition</li>
+                            <li>Semantic similarity matching</li>
+                            <li>Natural language processing</li>
+                            <li>Pattern recognition algorithms</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Resource Discovery -->
+            <div class="workflow-step">
+                <div class="step-number">3</div>
+                <h3><i class="fas fa-search me-2"></i>Multi-Platform Resource Discovery</h3>
+                <p><strong>Engine:</strong> Automated discovery across educational platforms</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Discovery Platforms:</h5>
+                        <ul>
+                            <li>YouTube educational channels</li>
+                            <li>Coursera & edX courses</li>
+                            <li>GitHub repositories & tools</li>
+                            <li>Official documentation</li>
+                            <li>Industry whitepapers</li>
+                            <li>Professional certifications</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Search Strategies:</h5>
+                        <ul>
+                            <li>Keyword optimization</li>
+                            <li>Content type filtering</li>
+                            <li>Recency prioritization</li>
+                            <li>Authority source identification</li>
+                            <li>Multi-language support</li>
+                            <li>Accessibility considerations</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Quality Assessment -->
+            <div class="workflow-step">
+                <div class="step-number">4</div>
+                <h3><i class="fas fa-star me-2"></i>AI-Driven Quality Assessment</h3>
+                <p><strong>Objective:</strong> Ensure only high-quality educational resources reach learners</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Quality Metrics:</h5>
+                        <ul>
+                            <li>Content accuracy & currency</li>
+                            <li>Educational completeness</li>
+                            <li>Author credibility</li>
+                            <li>Practical applicability</li>
+                            <li>Learning progression logic</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Assessment Process:</h5>
+                        <ul>
+                            <li>Automated content analysis</li>
+                            <li>Credibility verification</li>
+                            <li>Peer comparison ranking</li>
+                            <li>Learning outcome alignment</li>
+                            <li>Continuous quality monitoring</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: Learning Path Generation -->
+            <div class="workflow-step">
+                <div class="step-number">5</div>
+                <h3><i class="fas fa-route me-2"></i>Personalized Learning Path Generation</h3>
+                <p><strong>Goal:</strong> Create optimized learning sequences for skill mastery</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Path Components:</h5>
+                        <ul>
+                            <li>Beginner foundations</li>
+                            <li>Intermediate applications</li>
+                            <li>Advanced implementations</li>
+                            <li>Expert-level mastery</li>
+                            <li>Hands-on projects</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Personalization Factors:</h5>
+                        <ul>
+                            <li>Current skill level</li>
+                            <li>Learning preferences</li>
+                            <li>Time availability</li>
+                            <li>Career objectives</li>
+                            <li>Industry focus areas</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6: Enhanced Learning Experience -->
+            <div class="workflow-step">
+                <div class="step-number">6</div>
+                <h3><i class="fas fa-magic me-2"></i>AI-Enhanced Learning Experience</h3>
+                <p><strong>Innovation:</strong> AI-generated supplementary content for deeper learning</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>AI-Generated Content:</h5>
+                        <ul>
+                            <li>Comprehension questions</li>
+                            <li>Practical project ideas</li>
+                            <li>Learning objectives</li>
+                            <li>Assessment criteria</li>
+                            <li>Progress milestones</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Adaptive Features:</h5>
+                        <ul>
+                            <li>Progress tracking</li>
+                            <li>Difficulty adjustment</li>
+                            <li>Content recommendations</li>
+                            <li>Learning analytics</li>
+                            <li>Achievement recognition</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Metrics -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <h2 class="text-center mb-4">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Current Platform Metrics
+                    </h2>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <i class="fas fa-brain fa-2x mb-2"></i>
+                            <h3>5</h3>
+                            <p>Emerging Skills Identified</p>
+                        </div>
+                        <div class="metric-card">
+                            <i class="fas fa-book fa-2x mb-2"></i>
+                            <h3>70+</h3>
+                            <p>Curated Resources</p>
+                        </div>
+                        <div class="metric-card">
+                            <i class="fas fa-star fa-2x mb-2"></i>
+                            <h3>85%</h3>
+                            <p>High-Quality Content</p>
+                        </div>
+                        <div class="metric-card">
+                            <i class="fas fa-clock fa-2x mb-2"></i>
+                            <h3>&lt;24hrs</h3>
+                            <p>Discovery to Availability</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-5 pt-4 border-top">
+                <p class="text-muted">
+                    <i class="fas fa-robot me-2"></i>
+                    AI-Horizon Ed • Powered by Claude-3, GPT-4, and Perplexity AI • 
+                    <a href="https://portal.theaihorizon.org" class="text-decoration-none">Main Platform</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

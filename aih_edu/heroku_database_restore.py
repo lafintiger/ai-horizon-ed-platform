@@ -9,7 +9,7 @@ from utils.database import DatabaseManager
 
 def restore_skills():
     """Restore all emerging skills"""
-    db = DatabaseManager()
+    db_manager = DatabaseManager()
     
     skills_data = [
         {
@@ -124,7 +124,7 @@ def restore_skills():
     
     for skill_data in skills_data:
         try:
-            skill_id = db.add_emerging_skill(skill_data)
+            skill_id = db_manager.add_emerging_skill(skill_data)
             skill_ids[skill_data['skill_name']] = skill_id
             print(f"   ✅ {skill_data['skill_name']} (ID: {skill_id})")
         except Exception as e:
@@ -134,7 +134,7 @@ def restore_skills():
 
 def restore_resources(skill_ids):
     """Restore all educational resources and link them to skills"""
-    db = DatabaseManager()
+    db_manager = DatabaseManager()
     
     # Sample of key resources for each skill
     resources_data = [
@@ -324,12 +324,12 @@ def restore_resources(skill_ids):
             })
             
             # Add resource to database
-            resource_id = db.add_resource(resource_data)
+            resource_id = db_manager.add_resource(resource_data)
             
             # Link to skills
             for skill_name, relevance_score, resource_type_for_skill in skill_mappings:
                 if skill_name in skill_ids:
-                    db.link_skill_to_resource(
+                    db_manager.link_skill_to_resource(
                         skill_id=skill_ids[skill_name],
                         resource_id=resource_id,
                         relevance_score=relevance_score,
@@ -356,15 +356,15 @@ def main():
     restore_resources(skill_ids)
     
     # Verify restoration
-    db = DatabaseManager()
-    skills = db.get_emerging_skills()
+    db_manager = DatabaseManager()
+    skills = db_manager.get_emerging_skills()
     
     print(f"\n📊 Restoration Summary:")
     print(f"   Total Skills: {len(skills)}")
     
     total_resources = 0
     for skill in skills:
-        resources = db.get_resources_for_skill(skill['id'])
+        resources = db_manager.get_resources_for_skill(skill['id'])
         total_resources += len(resources)
         print(f"   - {skill['skill_name']}: {len(resources)} resources")
     

@@ -16,17 +16,17 @@ def full_heroku_restore():
     print("=" * 60)
     
     # Get local database
-    db = DatabaseManager()
+    db_manager = DatabaseManager()
     
     # Get all local skills
-    local_skills = db.get_emerging_skills()
+    local_skills = db_manager.get_emerging_skills()
     print(f"📊 Local database has {len(local_skills)} skills")
     
     total_resources = 0
     
     # Get all resources for each skill
     for skill in local_skills:
-        skill_resources = db.get_resources_for_skill(skill['id'])
+        skill_resources = db_manager.get_resources_for_skill(skill['id'])
         total_resources += len(skill_resources)
         print(f"  📚 {skill['skill_name']}: {len(skill_resources)} resources")
     
@@ -54,7 +54,7 @@ def full_heroku_restore():
         restoration_data['skills'].append(skill_data)
         
         # Get resources for this skill
-        skill_resources = db.get_resources_for_skill(skill['id'])
+        skill_resources = db_manager.get_resources_for_skill(skill['id'])
         
         for resource in skill_resources:
             resource_data = {

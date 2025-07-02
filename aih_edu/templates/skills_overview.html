@@ -186,16 +186,16 @@
                             </span>
                         </div>
                         
-                        <p class="text-muted mb-3">{{ skill.description }}</p>
+                        <p class="text-muted mb-3">{{ skill.description or 'No description available' }}</p>
                         
                         <!-- Urgency Progress -->
                         <div class="mb-3">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <small class="text-muted">Market Urgency</small>
-                                <small class="fw-bold">{{ (skill.urgency_score * 100) | round | int }}%</small>
+                                <small class="fw-bold">{{ ((skill.urgency_score or 0.5) * 100) | round | int }}%</small>
                             </div>
                             <div class="urgency-progress">
-                                <div class="urgency-fill {{ skill.demand_trend }}" style="width: {{ (skill.urgency_score * 100) | round | int }}%"></div>
+                                <div class="urgency-fill {{ skill.demand_trend or 'stable' }}" style="width: {{ ((skill.urgency_score or 0.5) * 100) | round | int }}%"></div>
                             </div>
                         </div>
                         
@@ -203,17 +203,17 @@
                         <div class="stats-row">
                             <div class="row text-center">
                                 <div class="col-4">
-                                    <strong>{{ skill.resource_count }}</strong>
+                                    <strong>{{ skill.resource_count or 0 }}</strong>
                                     <br>
                                     <small class="text-muted">Resources</small>
                                 </div>
                                 <div class="col-4">
-                                    <strong>{{ skill.resource_types | length }}</strong>
+                                    <strong>{{ (skill.resource_types | length) if skill.resource_types else 0 }}</strong>
                                     <br>
                                     <small class="text-muted">Types</small>
                                 </div>
                                 <div class="col-4">
-                                    <strong>{{ skill.category.replace('_', ' ').title() }}</strong>
+                                    <strong>{{ ((skill.category or 'general') | string).replace('_', ' ').title() }}</strong>
                                     <br>
                                     <small class="text-muted">Category</small>
                                 </div>

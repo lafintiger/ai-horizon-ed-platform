@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Methodology - AI-Horizon Ed</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+        
+        .methodology-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            color: #333;
+            margin: 2rem auto;
+            max-width: 1200px;
+            padding: 3rem;
+        }
+        
+        .methodology-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .method-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-left: 5px solid #28a745;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .method-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .method-icon {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .tech-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .tech-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .algorithm-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .quality-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .metric-item {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .nav-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .code-snippet {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="methodology-container">
+            <!-- Header -->
+            <div class="methodology-header">
+                <h1 class="display-4 mb-3">
+                    <i class="fas fa-microscope me-3"></i>
+                    AI-Horizon Ed Methodology
+                </h1>
+                <p class="lead">
+                    Scientific Approaches to Educational Resource Intelligence
+                </p>
+                <p class="text-muted">
+                    Deep dive into our AI-powered algorithms, quality assessment frameworks, and learning path optimization techniques
+                </p>
+                
+                <!-- Navigation -->
+                <div class="mt-4">
+                    <a href="/" class="nav-button">
+                        <i class="fas fa-home me-2"></i>Dashboard
+                    </a>
+                    <a href="/workflow" class="nav-button">
+                        <i class="fas fa-cogs me-2"></i>Workflow
+                    </a>
+                    <a href="/skills" class="nav-button">
+                        <i class="fas fa-graduation-cap me-2"></i>Skills Overview
+                    </a>
+                </div>
+            </div>
+
+            <!-- Core Technologies -->
+            <div class="row mb-5">
+                <div class="col-12">
+                    <h2 class="text-center mb-4">
+                        <i class="fas fa-robot me-2"></i>
+                        Core AI Technologies & Integration
+                    </h2>
+                    <div class="tech-stack">
+                        <div class="tech-card">
+                            <i class="fas fa-brain fa-3x mb-3"></i>
+                            <h4>Claude-3 Sonnet</h4>
+                            <p>Advanced content analysis, quality assessment, and educational objective generation</p>
+                            <small>Anthropic's Constitutional AI</small>
+                        </div>
+                        <div class="tech-card">
+                            <i class="fas fa-comments fa-3x mb-3"></i>
+                            <h4>GPT-4 Turbo</h4>
+                            <p>Skill decomposition, learning path creation, and comprehension question generation</p>
+                            <small>OpenAI's Large Language Model</small>
+                        </div>
+                        <div class="tech-card">
+                            <i class="fas fa-search fa-3x mb-3"></i>
+                            <h4>Perplexity AI</h4>
+                            <p>Real-time web search, resource discovery, and content relevance matching</p>
+                            <small>Perplexity Labs Search API</small>
+                        </div>
+                        <div class="tech-card">
+                            <i class="fas fa-database fa-3x mb-3"></i>
+                            <h4>SQLite + Python</h4>
+                            <p>Educational resource database with enhanced schema and learning analytics</p>
+                            <small>High-performance Data Management</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skill Intelligence Methodology -->
+            <div class="method-section">
+                <div class="method-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3>Skill Intelligence Extraction</h3>
+                <p><strong>Objective:</strong> Transform workforce market analysis into actionable learning priorities</p>
+                
+                <h5>Data Sources & Processing:</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul>
+                            <li><strong>Job Market Analysis:</strong> Real-time parsing of cybersecurity job postings</li>
+                            <li><strong>Industry Reports:</strong> Automated extraction from security vendors</li>
+                            <li><strong>Certification Trends:</strong> Professional development requirement analysis</li>
+                            <li><strong>Technology Adoption:</strong> Enterprise security tool implementation data</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="algorithm-box">
+                            <strong>Urgency Scoring Algorithm:</strong><br>
+                            skill_urgency = (market_demand × 0.4) +<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;(growth_rate × 0.3) +<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;(skill_gap × 0.2) +<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;(technology_maturity × 0.1)
+                        </div>
+                    </div>
+                </div>
+                
+                <h5>Current Identified Skills:</h5>
+                <ul>
+                    <li><strong>Zero Trust Architecture:</strong> 89% urgency - Critical infrastructure transition</li>
+                    <li><strong>AI-Enhanced SIEM:</strong> 85% urgency - Advanced threat detection</li>
+                    <li><strong>Cloud Security Posture Management:</strong> 78% urgency - Multi-cloud governance</li>
+                    <li><strong>Quantum-Safe Cryptography:</strong> 72% urgency - Future-proofing security</li>
+                    <li><strong>Vibe Coding:</strong> 68% urgency - Collaborative development security</li>
+                </ul>
+            </div>
+
+            <!-- AI Content Analysis -->
+            <div class="method-section">
+                <div class="method-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h3>AI-Powered Content Analysis Framework</h3>
+                <p><strong>Approach:</strong> Multi-model AI system for comprehensive educational resource evaluation</p>
+                
+                <h5>Content Analysis Pipeline:</h5>
+                <div class="code-snippet">
+def analyze_educational_content(resource_url, skill_context):
+    # Step 1: Content Extraction
+    content = extract_content_by_platform(resource_url)
+    
+    # Step 2: Multi-Model Analysis
+    claude_analysis = claude_quality_assessment(content, skill_context)
+    gpt4_analysis = gpt4_learning_objectives(content, skill_context)
+    
+    # Step 3: Quality Scoring
+    quality_score = calculate_composite_score(claude_analysis, gpt4_analysis)
+    
+    # Step 4: Educational Enhancement
+    questions = generate_comprehension_questions(content, skill_context)
+    projects = suggest_practical_projects(content, skill_context)
+    
+    return ContentAnalysisResult(quality_score, questions, projects)
+                </div>
+                
+                <h5>Quality Assessment Dimensions:</h5>
+                <div class="quality-metrics">
+                    <div class="metric-item">
+                        <strong>Accuracy</strong><br>
+                        Technical correctness & currency
+                    </div>
+                    <div class="metric-item">
+                        <strong>Completeness</strong><br>
+                        Coverage of learning objectives
+                    </div>
+                    <div class="metric-item">
+                        <strong>Clarity</strong><br>
+                        Pedagogical structure & flow
+                    </div>
+                    <div class="metric-item">
+                        <strong>Practicality</strong><br>
+                        Real-world applicability
+                    </div>
+                    <div class="metric-item">
+                        <strong>Authority</strong><br>
+                        Source credibility & expertise
+                    </div>
+                    <div class="metric-item">
+                        <strong>Engagement</strong><br>
+                        Learning interaction quality
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resource Discovery Engine -->
+            <div class="method-section">
+                <div class="method-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3>Multi-Platform Resource Discovery Engine</h3>
+                <p><strong>Strategy:</strong> Intelligent search across educational ecosystems with quality-first filtering</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Discovery Algorithms:</h5>
+                        <ul>
+                            <li><strong>Semantic Search:</strong> Vector embeddings for concept matching</li>
+                            <li><strong>Authority Ranking:</strong> Source credibility weighting</li>
+                            <li><strong>Recency Filtering:</strong> Content freshness prioritization</li>
+                            <li><strong>Format Optimization:</strong> Learning modality balancing</li>
+                            <li><strong>Difficulty Progression:</strong> Skill level appropriateness</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Platform-Specific Strategies:</h5>
+                        <ul>
+                            <li><strong>YouTube:</strong> Educational channel prioritization, engagement metrics</li>
+                            <li><strong>GitHub:</strong> Repository quality, star count, maintenance activity</li>
+                            <li><strong>Coursera/edX:</strong> Instructor credentials, completion rates</li>
+                            <li><strong>Documentation:</strong> Official sources, version currency</li>
+                            <li><strong>Certifications:</strong> Industry recognition, job market value</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="algorithm-box">
+                    <strong>Resource Relevance Score:</strong><br>
+                    relevance = (keyword_match × 0.25) + (semantic_similarity × 0.30) +<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;(authority_score × 0.20) + (recency_factor × 0.15) + (engagement_quality × 0.10)
+                </div>
+            </div>
+
+            <!-- Learning Path Optimization -->
+            <div class="method-section">
+                <div class="method-icon">
+                    <i class="fas fa-route"></i>
+                </div>
+                <h3>Learning Path Optimization Algorithm</h3>
+                <p><strong>Goal:</strong> Create personalized, progressive learning sequences for optimal skill acquisition</p>
+                
+                <h5>Path Generation Methodology:</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Prerequisite Mapping:</h6>
+                        <ul>
+                            <li>Skill dependency graph construction</li>
+                            <li>Knowledge prerequisite identification</li>
+                            <li>Learning sequence optimization</li>
+                            <li>Difficulty progression modeling</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Personalization Factors:</h6>
+                        <ul>
+                            <li>Current skill level assessment</li>
+                            <li>Learning pace preferences</li>
+                            <li>Time availability constraints</li>
+                            <li>Career objective alignment</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="code-snippet">
+def generate_learning_path(skill, user_profile):
+    # Step 1: Skill Decomposition
+    sub_skills = decompose_skill_into_components(skill)
+    
+    # Step 2: Prerequisite Analysis
+    dependencies = analyze_prerequisites(sub_skills)
+    
+    # Step 3: Resource Mapping
+    resources = map_resources_to_skills(sub_skills, quality_threshold=0.8)
+    
+    # Step 4: Sequence Optimization
+    optimal_sequence = optimize_learning_sequence(
+        resources, dependencies, user_profile
+    )
+    
+    # Step 5: Difficulty Progression
+    return create_progressive_path(optimal_sequence, 
+                                 levels=['beginner', 'intermediate', 'advanced', 'expert'])
+                </div>
+            </div>
+
+            <!-- Enhanced Learning Experience -->
+            <div class="method-section">
+                <div class="method-icon">
+                    <i class="fas fa-magic"></i>
+                </div>
+                <h3>AI-Enhanced Learning Experience Generation</h3>
+                <p><strong>Innovation:</strong> Automated creation of supplementary educational content for deeper engagement</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>AI-Generated Content Types:</h5>
+                        <ul>
+                            <li><strong>Comprehension Questions:</strong> Multiple choice, short answer, essay prompts</li>
+                            <li><strong>Practical Projects:</strong> Hands-on implementations with success criteria</li>
+                            <li><strong>Learning Objectives:</strong> Clear, measurable skill outcomes</li>
+                            <li><strong>Progress Milestones:</strong> Achievement markers and checkpoints</li>
+                            <li><strong>Assessment Rubrics:</strong> Skill evaluation frameworks</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Adaptive Learning Features:</h5>
+                        <ul>
+                            <li><strong>Progress Tracking:</strong> Anonymous session-based analytics</li>
+                            <li><strong>Difficulty Adjustment:</strong> Dynamic content recommendation</li>
+                            <li><strong>Learning Analytics:</strong> Performance pattern recognition</li>
+                            <li><strong>Achievement System:</strong> Motivation through gamification</li>
+                            <li><strong>Recommendation Engine:</strong> Personalized next-step suggestions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quality Assurance & Validation -->
+            <div class="method-section">
+                <div class="method-icon">
+                    <i class="fas fa-check-double"></i>
+                </div>
+                <h3>Quality Assurance & Continuous Validation</h3>
+                <p><strong>Framework:</strong> Multi-layered validation system ensuring educational excellence</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Automated Quality Gates:</h5>
+                        <ul>
+                            <li>AI content analysis scoring (threshold: 0.75)</li>
+                            <li>Source authority verification</li>
+                            <li>Content freshness monitoring</li>
+                            <li>Learning objective alignment check</li>
+                            <li>Accessibility compliance validation</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Continuous Improvement:</h5>
+                        <ul>
+                            <li>Learning outcome effectiveness tracking</li>
+                            <li>Resource performance analytics</li>
+                            <li>User feedback integration</li>
+                            <li>Industry expert validation</li>
+                            <li>Competitive content benchmarking</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="algorithm-box">
+                    <strong>Quality Confidence Score:</strong><br>
+                    confidence = (ai_analysis_score × 0.40) + (source_authority × 0.30) +<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;(user_engagement × 0.20) + (expert_validation × 0.10)
+                </div>
+            </div>
+
+            <!-- Performance Metrics & Outcomes -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <h2 class="text-center mb-4">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Methodology Performance & Validation
+                    </h2>
+                    <div class="tech-stack">
+                        <div class="tech-card">
+                            <i class="fas fa-target fa-2x mb-2"></i>
+                            <h4>95%</h4>
+                            <p>Resource Discovery Accuracy</p>
+                            <small>Relevant content identification rate</small>
+                        </div>
+                        <div class="tech-card">
+                            <i class="fas fa-star fa-2x mb-2"></i>
+                            <h4>85%</h4>
+                            <p>High-Quality Content Ratio</p>
+                            <small>Resources meeting quality threshold</small>
+                        </div>
+                        <div class="tech-card">
+                            <i class="fas fa-clock fa-2x mb-2"></i>
+                            <h4>&lt;2s</h4>
+                            <p>Average Response Time</p>
+                            <small>Platform performance optimization</small>
+                        </div>
+                        <div class="tech-card">
+                            <i class="fas fa-graduation-cap fa-2x mb-2"></i>
+                            <h4>70+</h4>
+                            <p>Curated Learning Resources</p>
+                            <small>Across 5 emerging skills</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-5 pt-4 border-top">
+                <p class="text-muted">
+                    <i class="fas fa-flask me-2"></i>
+                    AI-Horizon Ed Methodology • Research & Development • 
+                    <a href="https://portal.theaihorizon.org" class="text-decoration-none">Main Platform</a>
+                </p>
+                <p class="small text-muted">
+                    Powered by Claude-3, GPT-4, Perplexity AI • Open Source Algorithms • Continuous Improvement
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

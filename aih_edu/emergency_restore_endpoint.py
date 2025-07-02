@@ -21,7 +21,7 @@ def emergency_restore():
         print("🚨 EMERGENCY DATABASE RESTORE STARTED")
         
         # Get database manager
-        db = DatabaseManager()
+        db_manager = DatabaseManager()
         
         # Add Prompt Engineering skill if not exists
         prompt_engineering_data = {
@@ -35,11 +35,11 @@ def emergency_restore():
         }
         
         # Check if Prompt Engineering exists
-        skills = db.get_emerging_skills()
+        skills = db_manager.get_emerging_skills()
         prompt_skill_exists = any('prompt' in skill['skill_name'].lower() for skill in skills)
         
         if not prompt_skill_exists:
-            skill_id = db.add_emerging_skill(prompt_engineering_data)
+            skill_id = db_manager.add_emerging_skill(prompt_engineering_data)
             print(f"✅ Added Prompt Engineering skill with ID: {skill_id}")
         else:
             print("✅ Prompt Engineering skill already exists")
@@ -98,7 +98,7 @@ def emergency_restore():
             
             if skill:
                 for resource_data in resources:
-                    resource_id = db.add_educational_resource(resource_data)
+                    resource_id = db_manager.add_educational_resource(resource_data)
                     if resource_id:
                         # Map resource to skill
                         mapping_data = {
@@ -107,7 +107,7 @@ def emergency_restore():
                             'relevance_score': 0.9,
                             'resource_type_for_skill': 'foundation'
                         }
-                        db.add_skill_resource_mapping(mapping_data)
+                        db_manager.add_skill_resource_mapping(mapping_data)
                         total_added += 1
                         print(f"✅ Added resource: {resource_data['title']}")
         
