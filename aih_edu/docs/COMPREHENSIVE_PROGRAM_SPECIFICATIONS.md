@@ -512,3 +512,55 @@ The platform is positioned to evolve from a cybersecurity-focused educational to
 **Document Version**: 3.0  
 **Last Updated**: December 2024  
 **Next Review**: Upon significant feature additions or architectural changes 
+
+## 🔧 CRITICAL FIXES & TROUBLESHOOTING
+
+### Data Structure Mismatch Issues (RESOLVED - July 2025)
+
+#### Issue 1: Skills Overview Template Error
+**Error**: `'dict object' has no attribute 'skill_name'`
+**Root Cause**: Flask route passed nested data structure to template that expected flattened access.
+
+```python
+# ❌ BROKEN: Nested structure
+skill_data = {
+    'skill': skill_dict,
+    'resource_count': count
+}
+# Template tried: skill.skill_name (fails)
+
+# ✅ FIXED: Flattened structure  
+skill_data = dict(skill)  # Copy all skill fields
+skill_data['resource_count'] = count
+# Template accesses: skill_data.skill_name (works)
+```
+
+#### Issue 2: Skill Detail Template Error
+**Error**: `'list object' has no attribute 'items'`
+**Root Cause**: Template expected dict with `.items()` method but received list.
+
+```python
+# ✅ SOLUTION: Ensure resource_categories (dict) passed as resources
+return render_template('skill_detail.html',
+    resources=learning_experience['resource_categories'],  # Dict with .items()
+    # other params...
+)
+```
+
+#### Issue 3: Template None.replace() Errors
+**Error**: `'None' has no attribute 'replace'`
+**Root Cause**: Template tried to call `.replace()` on None values.
+
+```jinja2
+<!-- ❌ BROKEN -->
+{{ skill.category.replace('_', ' ') }}
+
+<!-- ✅ FIXED -->
+{{ ((skill.category or 'general') | string).replace('_', ' ') }}
+```
+
+### Key Prevention Strategies
+1. **Data Structure Validation**: Always verify Flask route data matches template expectations
+2. **None-Safe Templates**: Use `(value or 'default')` before string operations  
+3. **Type Consistency**: Ensure dicts stay dicts, lists stay lists throughout the pipeline
+4. **Template Testing**: Test template rendering with actual database data, not mock data

@@ -124,6 +124,12 @@
                 <a href="/skills" class="nav-link me-3 fw-bold text-primary">
                     <i class="fas fa-lightbulb me-1"></i> Learn More
                 </a>
+                <a href="/workflow" class="nav-link me-3">
+                    <i class="fas fa-cogs me-1"></i> Workflow
+                </a>
+                <a href="/methodology" class="nav-link me-3">
+                    <i class="fas fa-microscope me-1"></i> Methodology
+                </a>
                 <a href="/database" class="nav-link me-3" target="_blank">
                     <i class="fas fa-database me-1"></i> Browse Resources
                 </a>
@@ -232,9 +238,11 @@
                                 <a href="/skill/{{ skill.skill_name.lower().replace(' ', '-') }}" class="btn btn-primary flex-fill">
                                     <i class="fas fa-book-open me-2"></i>Start Learning
                                 </a>
-                                <button class="btn btn-outline-secondary flex-fill" onclick="discoverResources('{{ skill.skill_name }}')">
-                                    <i class="fas fa-search me-2"></i>Discover More
-                                </button>
+                                                    {% if is_authenticated %}
+                    <button class="btn btn-outline-secondary flex-fill" onclick="discoverResources('{{ skill.skill_name }}')">
+                        <i class="fas fa-search me-2"></i>Discover More
+                    </button>
+                    {% endif %}
                             </div>
                         </div>
                     </div>

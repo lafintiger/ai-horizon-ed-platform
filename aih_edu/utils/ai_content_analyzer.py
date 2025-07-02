@@ -12,8 +12,8 @@ import urllib.parse
 import requests
 from dataclasses import dataclass
 
-from .config import config
-from .database import db_manager
+from utils.config import config
+from utils.database import db_manager
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -127,6 +127,12 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Make authentication available to templates
+@app.context_processor
+def inject_auth():
+    """Inject authentication status into all templates"""
+    return dict(is_authenticated=is_authenticated())
+
 # Background task management - File-based storage for persistence
 import json
 from pathlib import Path
@@ -258,10 +264,17 @@ def discover_resources_background(task_id, skill):
         
         # Find skill ID for linking
         skills = db.get_emerging_skills()
-        matching_skill = next(
-            (s for s in skills if s['skill_name'].lower() == skill.lower()), 
-            None
-        )
+        
+        # Normalize skill name for better matching
+        skill_normalized = skill.lower().replace('-', ' ').replace('_', ' ').strip()
+        
+        matching_skill = None
+        for s in skills:
+            skill_db_normalized = s['skill_name'].lower().replace('-', ' ').replace('_', ' ').strip()
+            if skill_db_normalized == skill_normalized:
+                matching_skill = s
+                break
+        
         skill_id = matching_skill['id'] if matching_skill else None
         
         for resource_data in resources:
@@ -417,6 +430,7 @@ def api_emerging_skills():
         return jsonify({"error": "Failed to retrieve emerging skills"}), 500
 
 @app.route('/api/discover/<skill>')
+@require_auth
 def api_discover_resources(skill):
     """Start background resource discovery for a specific skill"""
     try:
@@ -475,6 +489,7 @@ def api_discover_resources(skill):
         }), 500
 
 @app.route('/api/discover/status/<task_id>')
+@require_auth
 def api_discovery_status(task_id):
     """Check the status of a resource discovery task"""
     task = get_discovery_task(task_id)
@@ -1010,21 +1025,20 @@ def skills_overview():
     """Display overview of all emerging skills with learn-more links"""
     try:
         # Get all skills from database
-        skills = db.get_all_skills()
+        skills = db.get_emerging_skills()
         
         # Calculate statistics for each skill
         skill_stats = []
         for skill in skills:
-            skill_data = {
-                'skill': skill,
-                'resource_count': len(db.get_resources_for_skill(skill['id'])),
-                'learn_more_url': f"/skill/{skill['skill_name'].lower().replace(' ', '-').replace('&', 'and')}"
-            }
+            # Flatten skill data for template
+            skill_data = dict(skill)  # Copy all skill fields
+            skill_data['resource_count'] = len(db.get_resources_for_skill(skill['id']))
+            skill_data['learn_more_url'] = f"/skill/{skill['skill_name'].lower().replace(' ', '-').replace('&', 'and')}"
             skill_stats.append(skill_data)
         
         # Get overall platform statistics
         total_skills = len(skills)
-        total_resources = len(db.get_all_resources())
+        total_resources = len(db.search_resources(limit=1000))  # Get all resources
         
         return render_template('skills_overview.html', 
                              skills=skill_stats,
@@ -1034,19 +1048,31 @@ def skills_overview():
         logger.error(f"Error in skills overview: {e}")
         return render_template('skill_not_found.html'), 500
 
+@app.route('/workflow')
+def workflow():
+    """Display the AI-Horizon Ed workflow page"""
+    return render_template('workflow.html')
+
+@app.route('/methodology')
+def methodology():
+    """Display the AI-Horizon Ed methodology page"""
+    return render_template('methodology.html')
+
 @app.route('/skill/<skill_name>')
 def skill_detail(skill_name):
     """Enhanced skill page with comprehensive learning experience"""
+    logger.info(f"Skill detail requested for: '{skill_name}'")
     try:
-        from .utils.learning_experience_service import learning_service
+        from utils.learning_experience_service import learning_service
         
         # Get session ID from query params or create new one
         session_id = request.args.get('session_id')
         difficulty_filter = request.args.get('difficulty')
         cost_filter = request.args.get('cost')
         
-        # Convert URL format back to skill name (replace dashes with spaces, handle &)
-        target_skill_name = skill_name.lower().replace('-', ' ').replace('and', '&')
+        # Convert URL format back to skill name with robust matching
+        target_skill_name = normalize_skill_name_from_url(skill_name)
+        logger.info(f"Converted skill name: '{skill_name}' -> '{target_skill_name}'")
         
         # Get comprehensive learning experience
         learning_experience = learning_service.get_skill_learning_experience(
@@ -1063,7 +1089,7 @@ def skill_detail(skill_name):
                              skill=learning_experience['skill'],
                              session_id=learning_experience['session_id'],
                              learning_paths=learning_experience['learning_paths'],
-                             resources=learning_experience['resources'],
+                             resources=learning_experience['resource_categories'],  # Use categorized resources for template
                              resource_categories=learning_experience['resource_categories'],
                              learning_stats=learning_experience['learning_stats'],
                              progress=learning_experience['progress'],
@@ -1079,6 +1105,47 @@ def skill_detail(skill_name):
         logger.error(f"Error loading enhanced skill detail for {skill_name}: {e}")
         return render_template('skill_not_found.html', skill_name=skill_name), 500
 
+def normalize_skill_name_from_url(url_skill_name: str) -> str:
+    """Convert URL skill name to match database skill names"""
+    # Get all skills from database to find best match
+    skills = db.get_emerging_skills()
+    
+    # Create normalized URL name (replace dashes with spaces, lowercase)
+    url_normalized = url_skill_name.lower().replace('-', ' ').strip()
+    
+    # Try exact match first (after normalization)
+    for skill in skills:
+        skill_normalized = skill['skill_name'].lower().strip()
+        if skill_normalized == url_normalized:
+            return skill['skill_name']
+    
+    # Try partial matching for common variations
+    for skill in skills:
+        skill_normalized = skill['skill_name'].lower().strip()
+        
+        # Handle common variations:
+        # - "ai enhanced siem" should match "AI-Enhanced SIEM"
+        # - "quantum safe cryptography" should match "Quantum-Safe Cryptography" 
+        # - "ethical hacking and penetration testing" variations
+        
+        skill_words = skill_normalized.replace('-', ' ').split()
+        url_words = url_normalized.split()
+        
+        # If all URL words are found in skill name (in order), it's a match
+        if len(url_words) <= len(skill_words):
+            skill_text = ' '.join(skill_words)
+            url_text = ' '.join(url_words)
+            
+            # Remove common variations for better matching
+            skill_clean = skill_text.replace('&', 'and').replace('-', ' ')
+            url_clean = url_text.replace('&', 'and').replace('-', ' ')
+            
+            if url_clean in skill_clean or skill_clean in url_clean:
+                return skill['skill_name']
+    
+    # If no match found, return the original normalized name
+    return url_normalized
+
 # =============================================================================
 # ENHANCED LEARNING EXPERIENCE API ENDPOINTS
 # =============================================================================
@@ -1087,7 +1154,7 @@ def skill_detail(skill_name):
 def api_update_learning_progress():
     """Update learning progress for a session"""
     try:
-        from .utils.learning_experience_service import learning_service
+        from utils.learning_experience_service import learning_service
         
         data = request.get_json()
         session_id = data.get('session_id')
@@ -1117,7 +1184,7 @@ def api_update_learning_progress():
 def api_answer_question():
     """Process a comprehension question answer"""
     try:
-        from .utils.learning_experience_service import learning_service
+        from utils.learning_experience_service import learning_service
         
         data = request.get_json()
         session_id = data.get('session_id')
@@ -1145,7 +1212,7 @@ def api_answer_question():
 def api_complete_project():
     """Mark a project as completed"""
     try:
-        from .utils.learning_experience_service import learning_service
+        from utils.learning_experience_service import learning_service
         
         data = request.get_json()
         session_id = data.get('session_id')
@@ -1173,7 +1240,7 @@ def api_complete_project():
 def api_get_resource_content(resource_id):
     """Get enhanced learning content for a resource"""
     try:
-        from .utils.learning_experience_service import learning_service
+        from utils.learning_experience_service import learning_service
         
         content_type = request.args.get('type')  # 'questions', 'projects', 'summary', etc.
         
@@ -1193,7 +1260,7 @@ def api_get_resource_content(resource_id):
 def api_analyze_skill():
     """Queue a skill for comprehensive AI analysis"""
     try:
-        from .utils.learning_experience_service import learning_service
+        from utils.learning_experience_service import learning_service
         
         data = request.get_json()
         skill_name = data.get('skill_name')
@@ -1218,7 +1285,7 @@ def api_analyze_skill():
 def api_process_analysis_queue():
     """Process queued analysis tasks"""
     try:
-        from .utils.learning_experience_service import learning_service
+        from utils.learning_experience_service import learning_service
         
         data = request.get_json()
         batch_size = data.get('batch_size', 5)

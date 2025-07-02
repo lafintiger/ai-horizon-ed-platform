@@ -136,6 +136,12 @@
                 <a href="/skills" class="nav-link me-3">
                     <i class="fas fa-lightbulb me-1"></i> Learn More
                 </a>
+                <a href="/workflow" class="nav-link me-3">
+                    <i class="fas fa-cogs me-1"></i> Workflow
+                </a>
+                <a href="/methodology" class="nav-link me-3">
+                    <i class="fas fa-microscope me-1"></i> Methodology
+                </a>
                 <a href="/database" class="nav-link me-3" target="_blank">
                     <i class="fas fa-database me-1"></i> Browse Resources
                 </a>
@@ -164,9 +170,11 @@
                 <a href="/database" class="btn btn-light btn-lg me-3" target="_blank">
                     <i class="fas fa-database me-2"></i>Browse All Discovered Resources
                 </a>
+                {% if is_authenticated %}
                 <a href="#skills-container" class="btn btn-outline-light btn-lg">
                     <i class="fas fa-search me-2"></i>Discover New Resources
                 </a>
+                {% endif %}
             </div>
             <div class="row g-3">
                 <div class="col-md-3">
@@ -217,7 +225,8 @@
                 </div>
             </div>
 
-            <!-- Resource Discovery Panel -->
+            <!-- Resource Discovery Panel (Admin Only) -->
+            {% if is_authenticated %}
             <div class="col-lg-6">
                 <div class="card">
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
@@ -238,6 +247,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
 
         <!-- Alert Area -->
@@ -259,6 +269,7 @@
         // Global variables
         let emergingSkills = [];
         let currentDiscovery = null;
+        const isAuthenticated = Boolean("{{ is_authenticated }}");
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', async function() {
@@ -324,9 +335,7 @@
                             <a href="/skill/${skill.skill_name.toLowerCase().replace(/\s+/g, '-')}" class="btn btn-outline-primary btn-sm me-2">
                                 <i class="fas fa-book me-1"></i>Learn More
                             </a>
-                            <button class="btn discover-btn btn-sm" onclick="discoverResources('${skill.skill_name}')">
-                                <i class="fas fa-search me-1"></i>Discover
-                            </button>
+                            ${isAuthenticated ? '<button class="btn discover-btn btn-sm" onclick="discoverResources(\'' + skill.skill_name + '\')"><i class="fas fa-search me-1"></i>Discover</button>' : ''}
                         </div>
                     </div>
                 </div>

@@ -168,7 +168,7 @@
                         </span>
                         <span class="stat-badge">
                             <i class="fas fa-tag me-1"></i>
-                            {{ skill.category.replace('_', ' ').title() }}
+                            {{ ((skill.category or 'general') | string).replace('_', ' ').title() }}
                         </span>
                     </div>
                 </div>
@@ -549,7 +549,7 @@
                         <div class="col-md-8">
                             <p>Based on our analysis of industry trends, job market data, and technology adoption patterns:</p>
                             <ul>
-                                <li><strong>Source Analysis:</strong> {{ skill.source_analysis.replace('_', ' ').title() }}</li>
+                                <li><strong>Source Analysis:</strong> {{ ((skill.source_analysis or 'manual_curation') | string).replace('_', ' ').title() }}</li>
                                 <li><strong>Demand Trend:</strong> {{ skill.demand_trend.title() }} trajectory in job postings</li>
                                 <li><strong>Market Priority:</strong> {{ (skill.urgency_score * 100) | round | int }}% urgency score based on supply/demand gap</li>
                             </ul>
@@ -578,7 +578,7 @@
                                 <div class="resource-type-header">
                                     <h5 class="mb-0">
                                         <i class="fas fa-{% if resource_type == 'youtube_video' %}play{% elif resource_type == 'online_course' %}graduation-cap{% elif resource_type == 'documentation' %}file-alt{% else %}link{% endif %} me-2"></i>
-                                        {{ resource_type.replace('_', ' ').title() }} ({{ resource_list | length }})
+                                        {{ ((resource_type or 'resources') | string).replace('_', ' ').title() }} ({{ resource_list | length }})
                                     </h5>
                                 </div>
                                 
@@ -621,9 +621,11 @@
                                 <i class="fas fa-search fa-3x mb-3"></i>
                                 <h5>No Resources Found</h5>
                                 <p>Resources for this skill haven't been discovered yet.</p>
+                                {% if is_authenticated %}
                                 <a href="/" class="btn btn-primary">
                                     <i class="fas fa-search me-1"></i>Discover Resources
                                 </a>
+                                {% endif %}
                             </div>
                         {% endif %}
                     </div>
@@ -671,9 +673,11 @@
                         </div>
 
                         <div class="d-grid gap-2">
+                            {% if is_authenticated %}
                             <a href="/" class="btn btn-primary">
                                 <i class="fas fa-search me-1"></i>Discover More Resources
                             </a>
+                            {% endif %}
                             <a href="/database" class="btn btn-outline-secondary" target="_blank">
                                 <i class="fas fa-database me-1"></i>Browse All Resources
                             </a>

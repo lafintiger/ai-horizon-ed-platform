@@ -11,9 +11,9 @@ from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-from .config import config
-from .database import db_manager
-from .ai_content_analyzer import content_analyzer
+from utils.config import config
+from utils.database import db_manager
+from utils.ai_content_analyzer import content_analyzer
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +31,14 @@ class LearningExperienceService:
         
         # Get skill data
         skills = db_manager.get_emerging_skills()
+        logger.info(f"Found {len(skills)} skills in database")
+        logger.info(f"Looking for skill: '{skill_name}' (normalized)")
+        
         skill = next((s for s in skills if s['skill_name'].lower() == skill_name.lower()), None)
         
         if not skill:
+            available_skills = [s['skill_name'] for s in skills]
+            logger.warning(f"Skill '{skill_name}' not found. Available skills: {available_skills}")
             raise ValueError(f"Skill '{skill_name}' not found")
         
         skill_id = skill['id']

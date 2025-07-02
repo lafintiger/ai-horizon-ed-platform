@@ -402,7 +402,7 @@ class DatabaseManager:
                 resource['metadata'] = json.loads(resource['metadata'] or '{}')
                 resource['prerequisites'] = json.loads(resource['prerequisites'] or '[]')
                 resource['learning_outcomes'] = json.loads(resource['learning_outcomes'] or '[]')
-                resource['keywords'] = [k.strip() for k in resource['keywords'].split(',') if k.strip()]
+                resource['keywords'] = [k.strip() for k in (resource['keywords'] or '').split(',') if k.strip()]
                 resources.append(resource)
             
             return resources
@@ -605,7 +605,7 @@ class DatabaseManager:
                 resource['metadata'] = json.loads(resource['metadata'] or '{}')
                 resource['prerequisites'] = json.loads(resource['prerequisites'] or '[]')
                 resource['learning_outcomes'] = json.loads(resource['learning_outcomes'] or '[]')
-                resource['keywords'] = [k.strip() for k in resource['keywords'].split(',') if k.strip()]
+                resource['keywords'] = [k.strip() for k in (resource['keywords'] or '').split(',') if k.strip()]
                 resources.append(resource)
             
             return resources
@@ -807,7 +807,7 @@ class DatabaseManager:
                 resource['learning_outcomes'] = json.loads(resource['learning_outcomes'] or '[]')
                 resource['learning_objectives'] = json.loads(resource['learning_objectives'] or '[]')
                 resource['content_extracted'] = json.loads(resource['content_extracted'] or '{}')
-                resource['keywords'] = [k.strip() for k in resource['keywords'].split(',') if k.strip()]
+                resource['keywords'] = [k.strip() for k in (resource['keywords'] or '').split(',') if k.strip()]
                 
                 # Get associated learning content
                 resource['learning_content'] = self.get_learning_content(resource['id'])
