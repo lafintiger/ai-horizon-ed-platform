@@ -788,6 +788,109 @@ def emergency_restore():
             'message': f'Restoration failed: {str(e)}'
         }), 500
 
+@app.route('/emergency-restore-full', methods=['POST'])
+def emergency_restore_full():
+    """Complete database restoration - accepts full database export"""
+    try:
+        logger.info("🚨 COMPLETE DATABASE RESTORATION STARTED")
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'status': 'error', 'message': 'No data provided'}), 400
+        
+        skills_data = data.get('skills', [])
+        resources_data = data.get('resources', [])
+        mappings_data = data.get('mappings', [])
+        
+        logger.info(f"Restoring {len(skills_data)} skills, {len(resources_data)} resources")
+        
+        # Add all skills
+        skill_mapping = {}  # old_name -> new_id
+        for skill_data in skills_data:
+            try:
+                # Check if skill exists
+                existing_skills = db.get_emerging_skills()
+                existing_skill = None
+                for s in existing_skills:
+                    if s['skill_name'].lower() == skill_data['skill_name'].lower():
+                        existing_skill = s
+                        break
+                
+                if existing_skill:
+                    skill_mapping[skill_data['skill_name']] = existing_skill['id']
+                    logger.info(f"Using existing skill: {skill_data['skill_name']}")
+                else:
+                    skill_id = db.add_emerging_skill(skill_data)
+                    skill_mapping[skill_data['skill_name']] = skill_id
+                    logger.info(f"Added skill: {skill_data['skill_name']} (ID: {skill_id})")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to add skill {skill_data['skill_name']}: {e}")
+        
+        # Add all resources
+        resource_mapping = {}  # title -> resource_id
+        added_resources = 0
+        
+        for resource_data in resources_data:
+            try:
+                # Check if resource already exists
+                existing = db.search_resources(query=resource_data['title'][:20], limit=1)
+                if existing:
+                    resource_mapping[resource_data['title']] = existing[0]['id']
+                    continue
+                
+                resource_id = db.add_resource(resource_data)
+                if resource_id:
+                    resource_mapping[resource_data['title']] = resource_id
+                    added_resources += 1
+                    logger.info(f"Added resource: {resource_data['title']}")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to add resource {resource_data['title']}: {e}")
+        
+        # Create mappings
+        created_mappings = 0
+        for mapping in mappings_data:
+            try:
+                skill_name = mapping['skill_name']
+                resource_title = mapping['resource_title']
+                
+                if skill_name in skill_mapping and resource_title in resource_mapping:
+                    skill_id = skill_mapping[skill_name]
+                    resource_id = resource_mapping[resource_title]
+                    
+                    db.link_skill_to_resource(
+                        skill_id=skill_id,
+                        resource_id=resource_id,
+                        relevance_score=mapping.get('relevance_score', 0.9),
+                        resource_type_for_skill=mapping.get('resource_type_for_skill', 'foundation')
+                    )
+                    created_mappings += 1
+                    
+            except Exception as e:
+                logger.warning(f"Failed to create mapping: {e}")
+        
+        logger.info(f"🎯 Complete restoration finished!")
+        logger.info(f"   Skills: {len(skill_mapping)}")
+        logger.info(f"   Resources added: {added_resources}")
+        logger.info(f"   Mappings created: {created_mappings}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Complete database restored! Added {added_resources} resources.',
+            'skills_count': len(skill_mapping),
+            'resources_added': added_resources,
+            'mappings_created': created_mappings,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error during complete restoration: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Complete restoration failed: {str(e)}'
+        }), 500
+
 @app.route('/admin')
 @require_auth
 def admin_panel():
