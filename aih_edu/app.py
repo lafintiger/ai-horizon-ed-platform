@@ -755,16 +755,19 @@ def emergency_restore():
                     # Check if resource already exists
                     existing = db.search_resources(query=resource_data['title'][:20], limit=1)
                     if not existing:
-                        resource_id = db.add_educational_resource(resource_data)
+                        # Add required fields for database
+                        resource_data['skill_category'] = skill['category']
+                        resource_data['learning_level'] = 'intermediate'
+                        
+                        resource_id = db.add_resource(resource_data)
                         if resource_id:
                             # Map resource to skill
-                            mapping_data = {
-                                'skill_id': skill['id'],
-                                'resource_id': resource_id,
-                                'relevance_score': 0.9,
-                                'resource_type_for_skill': 'foundation'
-                            }
-                            db.add_skill_resource_mapping(mapping_data)
+                            db.link_skill_to_resource(
+                                skill_id=skill['id'],
+                                resource_id=resource_id,
+                                relevance_score=0.9,
+                                resource_type_for_skill='foundation'
+                            )
                             total_added += 1
                             logger.info(f"✅ Added resource: {resource_data['title']}")
         
