@@ -1703,6 +1703,86 @@ def api_test_enhanced_analysis():
             'message': 'Enhanced analysis test failed'
         }), 500
 
+@app.route('/api/fix-categorization', methods=['POST'])
+def fix_categorization():
+    """Fix cost_type and difficulty_level for all resources"""
+    try:
+        # Resource categorization rules
+        cost_categorization = {
+            'youtube_video': 'free',
+            'documentation': 'free', 
+            'tutorial': 'free',
+            'article': 'free',
+            'tool': 'freemium',  # Most tools have free tiers
+            'online_course': 'paid',  # Most courses are paid
+            'course': 'paid'
+        }
+        
+        difficulty_keywords = {
+            'beginner': ['beginner', 'introduction', 'basics', 'fundamentals', 'getting started', 'tutorial'],
+            'advanced': ['advanced', 'expert', 'master', 'professional', 'enterprise', 'architecture']
+        }
+        
+        # Get all resources
+        resources = db_manager.get_all_resources()
+        updated_count = 0
+        
+        for resource in resources:
+            resource_id = resource['id']
+            title = resource.get('title', '').lower()
+            description = resource.get('description', '').lower()
+            resource_type = resource.get('resource_type', '')
+            
+            # Determine cost type
+            new_cost_type = cost_categorization.get(resource_type, 'unknown')
+            
+            # Special cases for cost type
+            if 'free' in title or 'free' in description:
+                new_cost_type = 'free'
+            elif 'paid' in title or 'premium' in title:
+                new_cost_type = 'paid'
+            elif 'udemy.com' in description or 'coursera.org' in description:
+                new_cost_type = 'paid'
+            
+            # Determine difficulty level
+            content = f"{title} {description}"
+            new_difficulty_level = 'intermediate'  # Default
+            
+            # Check for beginner indicators
+            if any(keyword in content for keyword in difficulty_keywords['beginner']):
+                new_difficulty_level = 'beginner'
+            # Check for advanced indicators  
+            elif any(keyword in content for keyword in difficulty_keywords['advanced']):
+                new_difficulty_level = 'advanced'
+            
+            # Update the resource
+            success = db_manager.update_resource_categorization(
+                resource_id, new_cost_type, new_difficulty_level
+            )
+            
+            if success:
+                updated_count += 1
+        
+        # Get updated distribution
+        cost_distribution = db_manager.get_cost_distribution()
+        difficulty_distribution = db_manager.get_difficulty_distribution()
+        
+        return jsonify({
+            'success': True,
+            'updated_count': updated_count,
+            'total_resources': len(resources),
+            'cost_distribution': cost_distribution,
+            'difficulty_distribution': difficulty_distribution,
+            'message': f'Successfully updated {updated_count} resources with proper categorization'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fixing categorization: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='AI-Horizon Ed Server')
     parser.add_argument('--host', default='0.0.0.0', help='Host to bind to')
