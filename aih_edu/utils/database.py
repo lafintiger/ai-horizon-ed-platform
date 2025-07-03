@@ -988,5 +988,29 @@ class DatabaseManager:
             logger.error(f"Error getting difficulty distribution: {e}")
             return {}
 
+    def get_all_resources(self):
+        """Get all educational resources"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT id, title, description, resource_type, cost_type, difficulty_level,
+                           url, quality_score, learning_level, author, estimated_duration
+                    FROM educational_resources
+                    ORDER BY quality_score DESC
+                """)
+                
+                columns = [desc[0] for desc in cursor.description]
+                resources = []
+                
+                for row in cursor.fetchall():
+                    resource = dict(zip(columns, row))
+                    resources.append(resource)
+                
+                return resources
+        except Exception as e:
+            logger.error(f"Error getting all resources: {e}")
+            return []
+
 # Global database instance
 db_manager = DatabaseManager() 
