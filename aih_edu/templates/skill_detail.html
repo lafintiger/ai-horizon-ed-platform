@@ -618,9 +618,16 @@
                                                         • <i class="fas fa-clock me-1"></i>{{ resource.duration_minutes }}min
                                                     {% endif %}
                                                 </div>
-                                                <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-success btn-sm">
-                                                    <i class="fas fa-external-link-alt me-1"></i>Start Free
-                                                </a>
+                                                <div class="d-flex gap-2">
+                                                    <button class="btn btn-outline-primary btn-sm quiz-btn" 
+                                                            data-resource-id="{{ resource.id }}" 
+                                                            data-resource-title="{{ resource.title }}">
+                                                        <i class="fas fa-question-circle me-1"></i>Quiz
+                                                    </button>
+                                                    <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-success btn-sm">
+                                                        <i class="fas fa-external-link-alt me-1"></i>Start Free
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
                                         {% endfor %}
@@ -670,9 +677,16 @@
                                                         • <i class="fas fa-clock me-1"></i>{{ resource.duration_minutes }}min
                                                     {% endif %}
                                                 </div>
-                                                <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-warning btn-sm">
-                                                    <i class="fas fa-external-link-alt me-1"></i>View Premium
-                                                </a>
+                                                <div class="d-flex gap-2">
+                                                    <button class="btn btn-outline-primary btn-sm quiz-btn" 
+                                                            data-resource-id="{{ resource.id }}" 
+                                                            data-resource-title="{{ resource.title }}">
+                                                        <i class="fas fa-question-circle me-1"></i>Quiz
+                                                    </button>
+                                                    <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-warning btn-sm">
+                                                        <i class="fas fa-external-link-alt me-1"></i>View Premium
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
                                         {% endfor %}
@@ -717,15 +731,23 @@
                                                 <p class="text-muted mb-3" style="font-size: 0.9rem;">{{ resource.description[:100] }}...</p>
                                                 
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <small class="resource-meta">
+                                                    <div class="resource-meta">
+                                                        <i class="fas fa-external-link-alt me-1"></i>
                                                         {{ resource.source_platform or 'External' }}
                                                         {% if resource.duration_minutes %}
                                                             • {{ resource.duration_minutes }}min
                                                         {% endif %}
-                                                    </small>
-                                                    <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-info btn-sm">
-                                                        <i class="fas fa-play me-1"></i>Start
-                                                    </a>
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-outline-primary btn-sm quiz-btn" 
+                                                                data-resource-id="{{ resource.id }}" 
+                                                                data-resource-title="{{ resource.title }}">
+                                                            <i class="fas fa-question-circle me-1"></i>Quiz
+                                                        </button>
+                                                        <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-info btn-sm">
+                                                            <i class="fas fa-play me-1"></i>Start
+                                                        </a>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -764,15 +786,23 @@
                                                 <p class="text-muted mb-3" style="font-size: 0.9rem;">{{ resource.description[:100] }}...</p>
                                                 
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <small class="resource-meta">
+                                                    <div class="resource-meta">
+                                                        <i class="fas fa-external-link-alt me-1"></i>
                                                         {{ resource.source_platform or 'External' }}
                                                         {% if resource.duration_minutes %}
                                                             • {{ resource.duration_minutes }}min
                                                         {% endif %}
-                                                    </small>
-                                                    <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-warning btn-sm">
-                                                        <i class="fas fa-play me-1"></i>Continue
-                                                    </a>
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-outline-primary btn-sm quiz-btn" 
+                                                                data-resource-id="{{ resource.id }}" 
+                                                                data-resource-title="{{ resource.title }}">
+                                                            <i class="fas fa-question-circle me-1"></i>Quiz
+                                                        </button>
+                                                        <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-warning btn-sm">
+                                                            <i class="fas fa-play me-1"></i>Continue
+                                                        </a>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -811,15 +841,23 @@
                                                 <p class="text-muted mb-3" style="font-size: 0.9rem;">{{ resource.description[:100] }}...</p>
                                                 
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <small class="resource-meta">
+                                                    <div class="resource-meta">
+                                                        <i class="fas fa-external-link-alt me-1"></i>
                                                         {{ resource.source_platform or 'External' }}
                                                         {% if resource.duration_minutes %}
                                                             • {{ resource.duration_minutes }}min
                                                         {% endif %}
-                                                    </small>
-                                                    <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-danger btn-sm">
-                                                        <i class="fas fa-rocket me-1"></i>Master
-                                                    </a>
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-outline-primary btn-sm quiz-btn" 
+                                                                data-resource-id="{{ resource.id }}" 
+                                                                data-resource-title="{{ resource.title }}">
+                                                            <i class="fas fa-question-circle me-1"></i>Quiz
+                                                        </button>
+                                                        <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-danger btn-sm">
+                                                            <i class="fas fa-rocket me-1"></i>Master
+                                                        </a>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -867,9 +905,16 @@
                                                 • <i class="fas fa-clock me-1"></i>{{ resource.duration_minutes }}min
                                             {% endif %}
                                         </div>
-                                        <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-external-link-alt me-1"></i>Open Resource
-                                        </a>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-outline-primary btn-sm quiz-btn" 
+                                                    data-resource-id="{{ resource.id }}" 
+                                                    data-resource-title="{{ resource.title }}">
+                                                <i class="fas fa-question-circle me-1"></i>Quiz
+                                            </button>
+                                            <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-external-link-alt me-1"></i>Open Resource
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -948,6 +993,406 @@
         </div>
     </div>
 
+    <!-- Quiz Modal -->
+    <div class="modal fade" id="quizModal" tabindex="-1" aria-labelledby="quizModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="quizModalLabel">
+                        <i class="fas fa-question-circle me-2"></i>Quiz
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="quizContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading quiz questions...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="submitQuiz" style="display: none;">Submit Quiz</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Quiz functionality
+            const quizButtons = document.querySelectorAll('.quiz-btn');
+            const quizModal = new bootstrap.Modal(document.getElementById('quizModal'));
+            
+            // Check quiz availability for all resources
+            checkQuizAvailability();
+            
+            // Add click handlers for quiz buttons
+            quizButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const resourceId = this.getAttribute('data-resource-id');
+                    const resourceTitle = this.getAttribute('data-resource-title');
+                    
+                    if (this.classList.contains('disabled')) {
+                        return false;
+                    }
+                    
+                    loadQuiz(resourceId, resourceTitle);
+                });
+            });
+            
+            async function checkQuizAvailability() {
+                for (const button of quizButtons) {
+                    const resourceId = button.getAttribute('data-resource-id');
+                    
+                    try {
+                        const response = await fetch(`/api/resource/${resourceId}/questions`);
+                        if (response.ok) {
+                            button.classList.remove('btn-outline-primary');
+                            button.classList.add('btn-primary');
+                            button.innerHTML = '<i class="fas fa-question-circle me-1"></i>Take Quiz';
+                        } else {
+                            button.classList.add('disabled');
+                            button.style.opacity = '0.5';
+                            button.innerHTML = '<i class="fas fa-clock me-1"></i>Coming Soon';
+                        }
+                    } catch (error) {
+                        button.classList.add('disabled');
+                        button.style.opacity = '0.5';
+                        button.innerHTML = '<i class="fas fa-clock me-1"></i>Coming Soon';
+                    }
+                }
+            }
+            
+            async function loadQuiz(resourceId, resourceTitle) {
+                document.getElementById('quizModalLabel').innerHTML = 
+                    `<i class="fas fa-question-circle me-2"></i>Quiz: ${resourceTitle}`;
+                
+                const quizContent = document.getElementById('quizContent');
+                quizContent.innerHTML = `
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading quiz questions...</p>
+                    </div>
+                `;
+                
+                quizModal.show();
+                
+                try {
+                    const response = await fetch(`/api/resource/${resourceId}/questions`);
+                    if (!response.ok) {
+                        throw new Error('Questions not available');
+                    }
+                    
+                    const questions = await response.json();
+                    displayQuiz(questions, resourceId);
+                } catch (error) {
+                    quizContent.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Quiz Not Available Yet</strong><br>
+                            Questions for this resource are still being generated. Please check back later!
+                        </div>
+                    `;
+                }
+            }
+            
+            function displayQuiz(questionsData, resourceId) {
+                const quizContent = document.getElementById('quizContent');
+                let html = '';
+                
+                // Extract questions array from the response
+                const questions = questionsData.questions || questionsData;
+                
+                questions.forEach((question, index) => {
+                    const questionText = question.question_text || question.question;
+                    
+                    html += `
+                        <div class="question-card mb-4">
+                            <h6><strong>Question ${index + 1}:</strong> ${questionText}</h6>
+                            <div class="options mt-3">
+                    `;
+                    
+                    // Handle different question types
+                    if (question.question_type === 'open_ended') {
+                        // For open-ended questions, show as text input
+                        html += `
+                            <div class="mb-3">
+                                <textarea class="form-control" 
+                                          name="question_${index}" 
+                                          id="q${index}_answer" 
+                                          rows="3" 
+                                          placeholder="Enter your answer here..."></textarea>
+                            </div>
+                        `;
+                    } else if (question.options && question.options.length > 0) {
+                        // For multiple choice questions
+                        question.options.forEach((option, optionIndex) => {
+                            html += `
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" 
+                                           name="question_${index}" value="${optionIndex}" 
+                                           id="q${index}_opt${optionIndex}">
+                                    <label class="form-check-label" for="q${index}_opt${optionIndex}">
+                                        ${option}
+                                    </label>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        // Fallback for questions without options
+                        html += `
+                            <div class="mb-3">
+                                <input type="text" class="form-control" 
+                                       name="question_${index}" 
+                                       id="q${index}_answer" 
+                                       placeholder="Enter your answer here...">
+                            </div>
+                        `;
+                    }
+                    
+                    html += `
+                            </div>
+                        </div>
+                        <hr>
+                    `;
+                });
+                
+                quizContent.innerHTML = html;
+                document.getElementById('submitQuiz').style.display = 'block';
+                
+                // Handle quiz submission
+                document.getElementById('submitQuiz').onclick = function() {
+                    submitQuiz(questions, resourceId);
+                };
+            }
+            
+            async function submitQuiz(questions, resourceId) {
+                const answers = [];
+                let allAnswered = true;
+                
+                questions.forEach((question, index) => {
+                    if (question.question_type === 'open_ended') {
+                        // For open-ended questions, get text input
+                        const textAnswer = document.getElementById(`q${index}_answer`);
+                        if (textAnswer && textAnswer.value.trim()) {
+                            answers.push(textAnswer.value.trim());
+                        } else {
+                            allAnswered = false;
+                        }
+                    } else {
+                        // For multiple choice questions
+                        const selectedOption = document.querySelector(`input[name="question_${index}"]:checked`);
+                        if (selectedOption) {
+                            answers.push(parseInt(selectedOption.value));
+                        } else {
+                            allAnswered = false;
+                        }
+                    }
+                });
+                
+                if (!allAnswered) {
+                    alert('Please answer all questions before submitting.');
+                    return;
+                }
+                
+                // Show grading in progress
+                const quizContent = document.getElementById('quizContent');
+                quizContent.innerHTML = `
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Grading...</span>
+                        </div>
+                        <p class="mt-2">AI is grading your answers...</p>
+                        <small class="text-muted">This may take a few seconds for detailed feedback</small>
+                    </div>
+                `;
+                
+                document.getElementById('submitQuiz').style.display = 'none';
+                
+                try {
+                    // Submit to AI grading endpoint
+                    const response = await fetch(`/api/quiz/${resourceId}/grade`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            answers: answers
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        
+                        if (result.ai_graded && result.grading_results) {
+                            // Display AI grading results
+                            displayAIGradingResults(result.grading_results, questions, answers);
+                        } else {
+                            // Fallback to basic grading display
+                            displayBasicResults(questions, answers);
+                        }
+                    } else {
+                        throw new Error('Grading failed');
+                    }
+                } catch (error) {
+                    console.error('AI grading failed, using basic grading:', error);
+                    // Fallback to basic grading
+                    displayBasicResults(questions, answers);
+                }
+            }
+            
+            function displayAIGradingResults(gradingResults, questions, answers) {
+                const quizContent = document.getElementById('quizContent');
+                const score = gradingResults.overall_score || 0;
+                const passingGrade = score >= 70;
+                
+                let resultHtml = `
+                    <div class="text-center mb-4">
+                        <div class="alert alert-${passingGrade ? 'success' : 'warning'}">
+                            <h4><i class="fas fa-${passingGrade ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                            AI-Graded Quiz Complete!</h4>
+                            <h2>${score}% ${gradingResults.grade_letter || ''}</h2>
+                            <p>${gradingResults.overall_feedback || 'Quiz completed successfully.'}</p>
+                            ${passingGrade ? 
+                                '<p><strong>Excellent work!</strong> You demonstrate solid understanding.</p>' : 
+                                '<p><strong>Keep studying!</strong> Review the detailed feedback below.</p>'
+                            }
+                        </div>
+                    </div>
+                `;
+                
+                // Display detailed feedback for each question
+                if (gradingResults.questions_evaluated) {
+                    resultHtml += '<div class="detailed-feedback">';
+                    gradingResults.questions_evaluated.forEach((evaluation) => {
+                        const scoreColor = evaluation.score >= 80 ? 'success' : 
+                                          evaluation.score >= 60 ? 'warning' : 'danger';
+                        
+                        resultHtml += `
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0"><strong>Question ${evaluation.question_number}</strong></h6>
+                                        <span class="badge bg-${scoreColor}">${evaluation.score}/100</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <strong>Your Answer:</strong>
+                                        <div class="bg-light p-2 rounded mt-1">${evaluation.student_answer}</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <strong>Model Answer:</strong>
+                                        <div class="bg-light p-2 rounded mt-1">${evaluation.correct_answer}</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <strong>Detailed Feedback:</strong>
+                                        <p class="mt-1">${evaluation.feedback}</p>
+                                    </div>
+                                    
+                                    ${evaluation.strengths && evaluation.strengths.length > 0 ? `
+                                        <div class="mb-2">
+                                            <strong class="text-success">Strengths:</strong>
+                                            <ul class="mb-0">
+                                                ${evaluation.strengths.map(strength => `<li>${strength}</li>`).join('')}
+                                            </ul>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${evaluation.improvements && evaluation.improvements.length > 0 ? `
+                                        <div class="mb-2">
+                                            <strong class="text-warning">Areas for Improvement:</strong>
+                                            <ul class="mb-0">
+                                                ${evaluation.improvements.map(improvement => `<li>${improvement}</li>`).join('')}
+                                            </ul>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    resultHtml += '</div>';
+                }
+                
+                // Add study recommendations
+                if (gradingResults.study_recommendations && gradingResults.study_recommendations.length > 0) {
+                    resultHtml += `
+                        <div class="card mt-3">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-book me-2"></i>Study Recommendations</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="mb-0">
+                                    ${gradingResults.study_recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                quizContent.innerHTML = resultHtml;
+            }
+            
+            function displayBasicResults(questions, answers) {
+                // Fallback to original basic grading logic
+                let correct = 0;
+                questions.forEach((question, index) => {
+                    if (question.question_type === 'open_ended') {
+                        if (answers[index] && answers[index].length > 10) {
+                            correct++;
+                        }
+                    } else {
+                        if (answers[index] === question.correct_answer) {
+                            correct++;
+                        }
+                    }
+                });
+                
+                const score = Math.round((correct / questions.length) * 100);
+                
+                let resultHtml = `
+                    <div class="text-center mb-4">
+                        <div class="alert alert-${score >= 70 ? 'success' : 'info'}">
+                            <h4><i class="fas fa-${score >= 70 ? 'check-circle' : 'info-circle'} me-2"></i>
+                            Quiz Complete!</h4>
+                            <h2>${score}%</h2>
+                            <p>You completed ${questions.length} questions.</p>
+                            <small class="text-muted">Basic grading used (AI grading temporarily unavailable)</small>
+                        </div>
+                    </div>
+                `;
+                
+                resultHtml += '<div class="explanations">';
+                questions.forEach((question, index) => {
+                    const questionText = question.question_text || question.question;
+                    const userAnswer = answers[index];
+                    const correctAnswer = question.correct_answer;
+                    const explanation = question.explanation || 'No explanation provided.';
+                    
+                    resultHtml += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h6><strong>Question ${index + 1}:</strong> ${questionText}</h6>
+                                <p><strong>Your Answer:</strong> ${userAnswer}</p>
+                                <p><strong>Correct Answer:</strong> ${correctAnswer}</p>
+                                <p><strong>Explanation:</strong> ${explanation}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+                resultHtml += '</div>';
+                
+                const quizContent = document.getElementById('quizContent');
+                quizContent.innerHTML = resultHtml;
+            }
+        });
+    </script>
 </body>
 </html> 

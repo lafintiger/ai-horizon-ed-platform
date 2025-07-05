@@ -35,8 +35,8 @@ sys.path.append(str(Path(__file__).parent))
 # Import our utilities
 from utils.config import config
 from utils.database import DatabaseManager
-from discover.resource_discovery import get_discovery_engine
-from core.enhanced_content_analyzer import enhanced_content_analyzer
+from discover.resource_discovery import get_discovery_engine, ResourceDiscoveryEngine
+from core.enhanced_content_analyzer import enhanced_content_analyzer, EnhancedContentAnalyzer
 
 # Authentication imports
 from flask import session, url_for, flash
@@ -91,6 +91,14 @@ def add_security_headers(response):
 
 # Initialize database
 db_manager = DatabaseManager()
+content_analyzer = EnhancedContentAnalyzer()
+
+# DIAGNOSTIC: Check what methods are available on db_manager
+available_methods = [method for method in dir(db_manager) if not method.startswith('_')]
+logger.info(f"DatabaseManager available methods: {available_methods}")
+logger.info(f"Has store_learning_content method: {hasattr(db_manager, 'store_learning_content')}")
+if hasattr(db_manager, 'store_learning_content'):
+    logger.info(f"store_learning_content method: {getattr(db_manager, 'store_learning_content')}")
 
 # Initialize resource discovery engine
 discovery_engine = None
@@ -1617,7 +1625,7 @@ def api_enhanced_content_analysis(resource_id):
         logger.info(f"Starting enhanced content analysis for resource {resource_id}")
         
         # Generate enhanced analysis
-        analysis = enhanced_content_analyzer.analyze_resource_content(resource_id)
+        analysis = content_analyzer.analyze_resource_content(resource_id)
         
         # Convert to dict for JSON response
         analysis_dict = {
@@ -1661,7 +1669,7 @@ def api_test_enhanced_analysis():
         # Test with a sample resource (resource ID 1 if it exists)
         test_resource_id = 1
         
-        analysis = enhanced_content_analyzer.analyze_resource_content(test_resource_id)
+        analysis = content_analyzer.analyze_resource_content(test_resource_id)
         
         return jsonify({
             'success': True,
@@ -1778,6 +1786,514 @@ def fix_categorization():
         
     except Exception as e:
         logger.error(f"Error fixing categorization: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# =============================================================================
+# RESOURCE QUIZ & LEARNING CONTENT ENDPOINTS
+# =============================================================================
+
+@app.route('/api/resource/<int:resource_id>/questions')
+def api_resource_questions(resource_id):
+    """Get quiz questions for a specific resource"""
+    try:
+        logger.info(f"Retrieving questions for resource {resource_id}")
+        
+        # Get resource details
+        resource = db_manager.get_resource_by_id(resource_id)
+        if not resource:
+            return jsonify({'error': 'Resource not found'}), 404
+        
+        # Try to get questions from learning_content table
+        questions = db_manager.get_resource_questions(resource_id)
+        
+        if questions:
+            return jsonify({
+                'success': True,
+                'resource_id': resource_id,
+                'resource_title': resource.get('title', ''),
+                'questions': questions,
+                'count': len(questions)
+            })
+        else:
+            # Generate questions using the enhanced content analyzer
+            logger.info(f"Generating questions for resource {resource_id}: {resource.get('title', '')}")
+            
+            # Use the existing content analyzer to generate questions
+            try:
+                analysis = content_analyzer.analyze_resource_content(resource_id)
+                if analysis and analysis.comprehension_questions:
+                    # Store the generated questions
+                    stored = db_manager.store_resource_questions(resource_id, analysis.comprehension_questions)
+                    if stored:
+                        return jsonify({
+                            'success': True,
+                            'resource_id': resource_id,
+                            'resource_title': resource.get('title', ''),
+                            'questions': analysis.comprehension_questions,
+                            'count': len(analysis.comprehension_questions),
+                            'generated': True
+                        })
+                    else:
+                        # Return generated questions even if storage failed
+                        return jsonify({
+                            'success': True,
+                            'resource_id': resource_id,
+                            'resource_title': resource.get('title', ''),
+                            'questions': analysis.comprehension_questions,
+                            'count': len(analysis.comprehension_questions),
+                            'generated': True,
+                            'warning': 'Questions generated but not stored'
+                        })
+                else:
+                    return jsonify({'error': 'Failed to generate questions'}), 500
+                    
+            except Exception as e:
+                logger.error(f"Error generating questions for resource {resource_id}: {e}")
+                return jsonify({'error': f'Question generation failed: {str(e)}'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error retrieving questions for resource {resource_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/resource/<int:resource_id>/exercises')
+def api_resource_exercises(resource_id):
+    """Get practical exercises for a specific resource"""
+    try:
+        logger.info(f"Retrieving exercises for resource {resource_id}")
+        
+        # Get resource details
+        resource = db_manager.get_resource_by_id(resource_id)
+        if not resource:
+            return jsonify({'error': 'Resource not found'}), 404
+        
+        # Try to get exercises from learning_content table
+        exercises = db_manager.get_resource_exercises(resource_id)
+        
+        if exercises:
+            return jsonify({
+                'success': True,
+                'resource_id': resource_id,
+                'resource_title': resource.get('title', ''),
+                'exercises': exercises,
+                'count': len(exercises)
+            })
+        else:
+            # Generate exercises using the enhanced content analyzer
+            logger.info(f"Generating exercises for resource {resource_id}: {resource.get('title', '')}")
+            
+            try:
+                analysis = content_analyzer.analyze_resource_content(resource_id)
+                if analysis and analysis.practical_exercises:
+                    # Store the generated exercises
+                    stored = db_manager.store_resource_exercises(resource_id, analysis.practical_exercises)
+                    if stored:
+                        return jsonify({
+                            'success': True,
+                            'resource_id': resource_id,
+                            'resource_title': resource.get('title', ''),
+                            'exercises': analysis.practical_exercises,
+                            'count': len(analysis.practical_exercises),
+                            'generated': True
+                        })
+                    else:
+                        # Return generated exercises even if storage failed
+                        return jsonify({
+                            'success': True,
+                            'resource_id': resource_id,
+                            'resource_title': resource.get('title', ''),
+                            'exercises': analysis.practical_exercises,
+                            'count': len(analysis.practical_exercises),
+                            'generated': True,
+                            'warning': 'Exercises generated but not stored'
+                        })
+                else:
+                    return jsonify({'error': 'Failed to generate exercises'}), 500
+                    
+            except Exception as e:
+                logger.error(f"Error generating exercises for resource {resource_id}: {e}")
+                return jsonify({'error': f'Exercise generation failed: {str(e)}'}), 500
+                
+    except Exception as e:
+        logger.error(f"Error retrieving exercises for resource {resource_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/quiz/<int:resource_id>/submit', methods=['POST'])
+def api_submit_quiz(resource_id):
+    """Submit quiz answers and get results"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        answers = data.get('answers', {})
+        if not answers:
+            return jsonify({'error': 'No answers provided'}), 400
+        
+        # Get the questions for this resource
+        questions = db_manager.get_resource_questions(resource_id)
+        if not questions:
+            return jsonify({'error': 'No questions found for this resource'}), 404
+        
+        # Score the quiz
+        total_questions = len(questions)
+        correct_answers = 0
+        results = []
+        
+        for question in questions:
+            question_id = question.get('id', question.get('question_id', ''))
+            user_answer = answers.get(str(question_id), '')
+            correct_answer = question.get('correct_answer', '')
+            
+            is_correct = user_answer.lower().strip() == correct_answer.lower().strip()
+            if is_correct:
+                correct_answers += 1
+            
+            results.append({
+                'question_id': question_id,
+                'question': question.get('question_text', ''),
+                'user_answer': user_answer,
+                'correct_answer': correct_answer,
+                'is_correct': is_correct,
+                'explanation': question.get('explanation', '')
+            })
+        
+        score_percentage = (correct_answers / total_questions) * 100 if total_questions > 0 else 0
+        
+        # Store quiz attempt (optional)
+        try:
+            db_manager.store_quiz_attempt(resource_id, answers, score_percentage)
+        except:
+            pass  # Don't fail if storage doesn't work
+        
+        return jsonify({
+            'success': True,
+            'resource_id': resource_id,
+            'score': {
+                'correct': correct_answers,
+                'total': total_questions,
+                'percentage': round(score_percentage, 1)
+            },
+            'results': results,
+            'passed': score_percentage >= 70,  # 70% passing grade
+            'message': f"You scored {correct_answers}/{total_questions} ({score_percentage:.1f}%)"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error submitting quiz for resource {resource_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/quiz/<int:resource_id>/grade', methods=['POST'])
+def api_grade_quiz_ai(resource_id):
+    """AI-powered grading for quiz answers"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        answers = data.get('answers', [])
+        if not answers:
+            return jsonify({'error': 'No answers provided'}), 400
+        
+        # Get the questions for this resource
+        questions = db_manager.get_resource_questions(resource_id)
+        if not questions:
+            return jsonify({'error': 'No questions found for this resource'}), 404
+        
+        # Get resource details for context
+        resource = db_manager.get_resource_by_id(resource_id)
+        if not resource:
+            return jsonify({'error': 'Resource not found'}), 404
+        
+        # Use AI to grade the answers
+        from utils.ai_content_analyzer import content_analyzer
+        grading_results = content_analyzer.grade_quiz_answers(
+            resource, questions, answers
+        )
+        
+        if grading_results:
+            return jsonify({
+                'success': True,
+                'resource_id': resource_id,
+                'grading_results': grading_results,
+                'ai_graded': True
+            })
+        else:
+            # Fallback to basic grading
+            return api_submit_quiz(resource_id)
+        
+    except Exception as e:
+        logger.error(f"Error grading quiz for resource {resource_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# =============================================================================
+# ADMIN CONTENT MANAGEMENT ENDPOINTS  
+# =============================================================================
+
+@app.route('/api/admin/content-status')
+@require_auth
+def api_admin_content_status():
+    """Get content generation status for all resources"""
+    try:
+        # Get all resources and their content status
+        resources = db_manager.get_all_resources()
+        
+        content_status = {
+            'total_resources': len(resources),
+            'resources_with_questions': 0,
+            'resources_with_exercises': 0,
+            'resources_needing_content': [],
+            'content_summary': []
+        }
+        
+        for resource in resources:
+            resource_id = resource['id']
+            title = resource.get('title', 'Untitled')
+            
+            # Check for questions
+            questions = db_manager.get_resource_questions(resource_id)
+            has_questions = len(questions) > 0 if questions else False
+            
+            # Check for exercises  
+            exercises = db_manager.get_resource_exercises(resource_id)
+            has_exercises = len(exercises) > 0 if exercises else False
+            
+            if has_questions:
+                content_status['resources_with_questions'] += 1
+            if has_exercises:
+                content_status['resources_with_exercises'] += 1
+                
+            if not has_questions and not has_exercises:
+                content_status['resources_needing_content'].append({
+                    'id': resource_id,
+                    'title': title,
+                    'type': resource.get('resource_type', 'unknown')
+                })
+            
+            content_status['content_summary'].append({
+                'id': resource_id,
+                'title': title[:50] + ('...' if len(title) > 50 else ''),
+                'has_questions': has_questions,
+                'has_exercises': has_exercises,
+                'question_count': len(questions) if questions else 0,
+                'exercise_count': len(exercises) if exercises else 0
+            })
+        
+        return jsonify({
+            'success': True,
+            'status': content_status
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting content status: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/generate-content', methods=['POST'])
+@require_auth
+def api_admin_generate_content():
+    """Generate content for resources that don't have it"""
+    try:
+        data = request.get_json()
+        resource_ids = data.get('resource_ids', [])
+        batch_size = data.get('batch_size', 5)
+        
+        if not resource_ids:
+            # Get all resources needing content
+            resources = db_manager.get_all_resources()
+            resource_ids = []
+            
+            for resource in resources:
+                resource_id = resource['id']
+                questions = db_manager.get_resource_questions(resource_id)
+                exercises = db_manager.get_resource_exercises(resource_id)
+                
+                if not questions or not exercises:
+                    resource_ids.append(resource_id)
+        
+        # Limit to batch size
+        resource_ids = resource_ids[:batch_size]
+        
+        results = {
+            'processed': 0,
+            'successful': 0,
+            'failed': 0,
+            'details': []
+        }
+        
+        for resource_id in resource_ids:
+            results['processed'] += 1
+            
+            try:
+                resource = db_manager.get_resource_by_id(resource_id)
+                if not resource:
+                    continue
+                
+                logger.info(f"Generating content for resource {resource_id}: {resource.get('title', '')}")
+                
+                # Generate analysis
+                analysis = content_analyzer.analyze_resource_content(resource_id)
+                
+                if analysis:
+                    # Store questions
+                    if analysis.comprehension_questions:
+                        db_manager.store_resource_questions(resource_id, analysis.comprehension_questions)
+                    
+                    # Store exercises
+                    if analysis.practical_exercises:
+                        db_manager.store_resource_exercises(resource_id, analysis.practical_exercises)
+                    
+                    results['successful'] += 1
+                    results['details'].append({
+                        'resource_id': resource_id,
+                        'title': resource.get('title', ''),
+                        'status': 'success',
+                        'questions_generated': len(analysis.comprehension_questions),
+                        'exercises_generated': len(analysis.practical_exercises)
+                    })
+                else:
+                    results['failed'] += 1
+                    results['details'].append({
+                        'resource_id': resource_id,
+                        'title': resource.get('title', ''),
+                        'status': 'failed',
+                        'error': 'No analysis generated'
+                    })
+                    
+            except Exception as e:
+                results['failed'] += 1
+                results['details'].append({
+                    'resource_id': resource_id,
+                    'title': resource.get('title', '') if 'resource' in locals() else 'Unknown',
+                    'status': 'failed',
+                    'error': str(e)
+                })
+                logger.error(f"Error generating content for resource {resource_id}: {e}")
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'message': f"Processed {results['processed']} resources: {results['successful']} successful, {results['failed']} failed"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in content generation: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/restart-services', methods=['POST'])
+@require_auth
+def api_admin_restart_services():
+    """Force restart all services and regenerate content"""
+    try:
+        logger.info("Admin triggered service restart and content regeneration")
+        
+        # Get all resources that need content generation
+        resources = db_manager.get_all_resources()
+        
+        processed_count = 0
+        successful_count = 0
+        
+        # Start content generation for all resources
+        for resource in resources:
+            try:
+                processed_count += 1
+                
+                # Queue resource for analysis
+                db_manager.queue_content_analysis(resource['id'])
+                
+                # Generate content immediately
+                content_result = content_analyzer.generate_learning_content(resource)
+                
+                if content_result and content_result.get('questions'):
+                    # Store questions
+                    db_manager.store_learning_content(
+                        resource['id'], 
+                        'questions', 
+                        content_result['questions']
+                    )
+                    
+                if content_result and content_result.get('exercises'):
+                    # Store exercises
+                    db_manager.store_learning_content(
+                        resource['id'], 
+                        'exercises', 
+                        content_result['exercises']
+                    )
+                    
+                successful_count += 1
+                logger.info(f"Regenerated content for resource {resource['id']}")
+                
+            except Exception as e:
+                logger.error(f"Error regenerating content for resource {resource['id']}: {e}")
+                continue
+        
+        return jsonify({
+            'success': True,
+            'message': f'Services restarted and content regeneration started for {processed_count} resources',
+            'resources_processed': processed_count,
+            'successful': successful_count
+        })
+        
+    except Exception as e:
+        logger.error(f"Error restarting services: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/admin/regenerate-content', methods=['POST'])
+@require_auth
+def api_admin_regenerate_content():
+    """Regenerate all learning content"""
+    try:
+        logger.info("Admin triggered content regeneration for all resources")
+        
+        # Get all resources
+        resources = db_manager.get_all_resources()
+        processed_count = 0
+        successful_count = 0
+        
+        for resource in resources:
+            try:
+                processed_count += 1
+                
+                # Generate learning content
+                content_result = content_analyzer.generate_learning_content(resource)
+                
+                if content_result:
+                    # Store questions
+                    if content_result.get('questions'):
+                        db_manager.store_learning_content(
+                            resource['id'], 
+                            'questions', 
+                            content_result['questions']
+                        )
+                    
+                    # Store exercises
+                    if content_result.get('exercises'):
+                        db_manager.store_learning_content(
+                            resource['id'], 
+                            'exercises', 
+                            content_result['exercises']
+                        )
+                    
+                    successful_count += 1
+                    logger.info(f"Regenerated content for resource {resource['id']}: {resource.get('title', 'Unknown')}")
+                    
+            except Exception as e:
+                logger.error(f"Error regenerating content for resource {resource['id']}: {e}")
+                continue
+        
+        return jsonify({
+            'success': True,
+            'message': f'Content regeneration completed for {successful_count}/{processed_count} resources',
+            'resources_processed': processed_count,
+            'successful': successful_count
+        })
+        
+    except Exception as e:
+        logger.error(f"Error regenerating content: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

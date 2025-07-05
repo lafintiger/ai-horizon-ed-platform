@@ -995,7 +995,7 @@ class DatabaseManager:
                 cursor = conn.cursor()
                 cursor.execute("""
                     SELECT id, title, description, resource_type, cost_type, difficulty_level,
-                           url, quality_score, learning_level, author, estimated_duration
+                           url, quality_score, learning_level, author, estimated_duration, skill_category
                     FROM educational_resources
                     ORDER BY quality_score DESC
                 """)
@@ -1011,6 +1011,210 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error getting all resources: {e}")
             return []
+
+    def get_all_skills(self):
+        """Get all emerging skills from the database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM emerging_skills 
+                    ORDER BY skill_name ASC
+                """)
+                
+                rows = cursor.fetchall()
+                skills = []
+                for row in rows:
+                    skill = dict(row)
+                    skill['job_market_data'] = json.loads(skill['job_market_data'] or '{}')
+                    skill['related_skills'] = json.loads(skill['related_skills'] or '[]')
+                    skills.append(skill)
+                
+                return skills
+        except Exception as e:
+            logger.error(f"Error getting all skills: {e}")
+            return []
+
+    def store_learning_content(self, resource_id, content_type, content_data):
+        """Store learning content (questions, exercises) for a resource"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Store in learning_content table - use correct column names
+                cursor.execute("""
+                    INSERT OR REPLACE INTO learning_content 
+                    (resource_id, content_type, content_data, ai_generated_date)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                """, (resource_id, content_type, json.dumps(content_data)))
+                
+                conn.commit()
+                logger.info(f"Successfully stored {content_type} content for resource {resource_id}")
+                
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error storing learning content for resource {resource_id}: {e}")
+            raise
+
+    def get_resource_questions(self, resource_id):
+        """Get quiz questions for a specific resource"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                # Get questions from learning_content table
+                cursor.execute("""
+                    SELECT content_data 
+                    FROM learning_content 
+                    WHERE resource_id = ? AND content_type = 'questions'
+                """, (resource_id,))
+                
+                result = cursor.fetchone()
+                if result:
+                    content_data = json.loads(result['content_data'])
+                    
+                    # Handle both formats: direct list or dict with 'questions' key
+                    if isinstance(content_data, list):
+                        return content_data
+                    elif isinstance(content_data, dict):
+                        return content_data.get('questions', [])
+                    else:
+                        return []
+                else:
+                    return []
+                    
+        except Exception as e:
+            logger.error(f"Error getting questions for resource {resource_id}: {e}")
+            return []
+
+    def get_resource_exercises(self, resource_id):
+        """Get practical exercises for a specific resource"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                # Get exercises from learning_content table
+                cursor.execute("""
+                    SELECT content_data 
+                    FROM learning_content 
+                    WHERE resource_id = ? AND content_type = 'exercises'
+                """, (resource_id,))
+                
+                result = cursor.fetchone()
+                if result:
+                    content_data = json.loads(result['content_data'])
+                    
+                    # Handle both formats: direct list or dict with 'exercises' key
+                    if isinstance(content_data, list):
+                        return content_data
+                    elif isinstance(content_data, dict):
+                        return content_data.get('exercises', [])
+                    else:
+                        return []
+                else:
+                    return []
+                    
+        except Exception as e:
+            logger.error(f"Error getting exercises for resource {resource_id}: {e}")
+            return []
+
+    def store_resource_questions(self, resource_id, questions):
+        """Store quiz questions for a resource"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Store questions in learning_content table
+                content_data = {
+                    'questions': questions,
+                    'generated_at': datetime.now().isoformat()
+                }
+                
+                cursor.execute("""
+                    INSERT OR REPLACE INTO learning_content 
+                    (resource_id, content_type, content_data, ai_generated_date)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                """, (
+                    resource_id,
+                    'questions',
+                    json.dumps(content_data)
+                ))
+                
+                conn.commit()
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error storing questions for resource {resource_id}: {e}")
+            return False
+
+    def store_resource_exercises(self, resource_id, exercises):
+        """Store practical exercises for a resource"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Store exercises in learning_content table
+                content_data = {
+                    'exercises': exercises,
+                    'generated_at': datetime.now().isoformat()
+                }
+                
+                cursor.execute("""
+                    INSERT OR REPLACE INTO learning_content 
+                    (resource_id, content_type, content_data, ai_generated_date)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                """, (
+                    resource_id,
+                    'exercises',
+                    json.dumps(content_data)
+                ))
+                
+                conn.commit()
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error storing exercises for resource {resource_id}: {e}")
+            return False
+
+    def store_quiz_attempt(self, resource_id, answers, score_percentage):
+        """Store a quiz attempt"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Create quiz_attempts table if it doesn't exist
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS quiz_attempts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        resource_id INTEGER,
+                        answers TEXT,
+                        score_percentage REAL,
+                        created_at TEXT,
+                        FOREIGN KEY (resource_id) REFERENCES educational_resources (id)
+                    )
+                """)
+                
+                # Store the attempt
+                cursor.execute("""
+                    INSERT INTO quiz_attempts (resource_id, answers, score_percentage, created_at)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    resource_id,
+                    json.dumps(answers),
+                    score_percentage,
+                    datetime.now().isoformat()
+                ))
+                
+                conn.commit()
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error storing quiz attempt for resource {resource_id}: {e}")
+            return False
 
 # Global database instance
 db_manager = DatabaseManager() 

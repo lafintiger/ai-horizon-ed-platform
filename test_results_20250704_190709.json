@@ -1,0 +1,75 @@
+{
+  "timestamp": "2025-07-04T19:07:09.141461",
+  "summary": {
+    "passed": 9,
+    "failed": 1,
+    "warnings": 0,
+    "pass_rate": 90.0
+  },
+  "details": [
+    {
+      "test": "Directory Structure",
+      "passed": true,
+      "message": "All required files present, no deprecated files found",
+      "details": {}
+    },
+    {
+      "test": "Database Content",
+      "passed": true,
+      "message": "Database healthy: 86 resources, 7 skills, 18 learning content",
+      "details": {
+        "resources": 86,
+        "skills": 7,
+        "learning_content": 18
+      }
+    },
+    {
+      "test": "Dependencies",
+      "passed": true,
+      "message": "All required Python modules available",
+      "details": {}
+    },
+    {
+      "test": "Server Running",
+      "passed": true,
+      "message": "Server responding on http://localhost:9000",
+      "details": {}
+    },
+    {
+      "test": "Server Running",
+      "passed": true,
+      "message": "Server responding on http://localhost:9000",
+      "details": {}
+    },
+    {
+      "test": "API Endpoints",
+      "passed": true,
+      "message": "All core endpoints responding correctly",
+      "details": {}
+    },
+    {
+      "test": "Server Running",
+      "passed": true,
+      "message": "Server responding on http://localhost:9000",
+      "details": {}
+    },
+    {
+      "test": "Skill Pages",
+      "passed": false,
+      "message": "No skills found in database",
+      "details": {}
+    },
+    {
+      "test": "Port Status",
+      "passed": true,
+      "message": "Port 9000 in use by our application",
+      "details": {}
+    },
+    {
+      "test": "System Cleanup",
+      "passed": true,
+      "message": "No cleanup issues found",
+      "details": {}
+    }
+  ]
+}

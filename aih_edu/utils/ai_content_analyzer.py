@@ -580,5 +580,206 @@ Best suited for learners who want to develop practical skills in {resource['skil
                 {'summary': result.learning_summary}
             )
 
+    def grade_quiz_answers(self, resource: Dict[str, Any], questions: List[Dict[str, Any]], 
+                          answers: List[str]) -> Optional[Dict[str, Any]]:
+        """Grade quiz answers using AI for intelligent evaluation"""
+        if len(answers) != len(questions):
+            logger.error(f"Answer count ({len(answers)}) doesn't match question count ({len(questions)})")
+            return None
+        
+        # Build grading prompt
+        grading_prompt = self._build_grading_prompt(resource, questions, answers)
+        
+        # Get AI evaluation
+        try:
+            # Try Claude first
+            if self.anthropic_api_key:
+                result = self._query_claude_for_grading(grading_prompt)
+                if result:
+                    return result
+            
+            # Fallback to OpenAI
+            if self.openai_api_key:
+                result = self._query_openai_for_grading(grading_prompt)
+                if result:
+                    return result
+            
+            # If no AI available, return None to use fallback
+            return None
+            
+        except Exception as e:
+            logger.error(f"AI grading failed: {e}")
+            return None
+    
+    def _build_grading_prompt(self, resource: Dict[str, Any], questions: List[Dict[str, Any]], 
+                             answers: List[str]) -> str:
+        """Build comprehensive grading prompt for AI"""
+        # Handle both dictionary and other formats
+        if isinstance(resource, dict):
+            skill_category = resource.get('skill_category', 'technology')
+            title = resource.get('title', 'Unknown')
+            description = resource.get('description', 'No description available')
+        else:
+            skill_category = 'technology'
+            title = 'Unknown'
+            description = 'No description available'
+            
+        prompt = f"""
+You are an expert educational assessor evaluating quiz answers for a resource about {skill_category}.
+
+RESOURCE CONTEXT:
+Title: {title}
+Description: {description}
+Subject Area: {skill_category}
+
+GRADING TASK:
+Please evaluate each answer against the provided correct answer and explanation. For each question, provide:
+1. A score from 0-100 (0 = completely wrong, 100 = perfect answer)
+2. Detailed feedback explaining the scoring
+3. Specific suggestions for improvement
+4. Recognition of what the student got right (if anything)
+
+EVALUATION CRITERIA:
+- Accuracy of core concepts (40%)
+- Completeness of answer (30%)
+- Clarity and organization (20%)
+- Practical understanding (10%)
+
+QUESTIONS AND ANSWERS TO EVALUATE:
+"""
+        
+        for i, (question, answer) in enumerate(zip(questions, answers)):
+            question_text = question.get('question_text', question.get('question', ''))
+            correct_answer = question.get('correct_answer', '')
+            explanation = question.get('explanation', 'No explanation provided')
+            
+            prompt += f"""
+Question {i+1}: {question_text}
+Student Answer: {answer}
+Correct Answer: {correct_answer}
+Explanation: {explanation}
+
+"""
+        
+        prompt += """
+Please provide your evaluation in this JSON format:
+{
+    "overall_score": 85,
+    "total_questions": 5,
+    "questions_evaluated": [
+        {
+            "question_number": 1,
+            "student_answer": "...",
+            "correct_answer": "...",
+            "score": 85,
+            "max_score": 100,
+            "feedback": "Your answer demonstrates good understanding of the core concepts. You correctly identified... However, you could improve by...",
+            "strengths": ["Correct identification of key concepts", "Good use of examples"],
+            "improvements": ["More detail needed on implementation", "Consider edge cases"],
+            "partial_credit_given": true
+        }
+    ],
+    "overall_feedback": "Overall, you show strong understanding of the material. Focus on providing more detailed explanations and practical examples.",
+    "study_recommendations": ["Review the section on advanced concepts", "Practice with real-world examples"],
+    "passing_grade": true,
+    "grade_letter": "B+"
+}
+
+Be encouraging but honest in your feedback. Recognize effort and partial understanding while clearly indicating areas for improvement.
+"""
+        
+        return prompt
+    
+    def _query_claude_for_grading(self, prompt: str) -> Optional[Dict[str, Any]]:
+        """Query Claude specifically for grading with optimized parameters"""
+        try:
+            headers = {
+                'Content-Type': 'application/json',
+                'x-api-key': self.anthropic_api_key,
+                'anthropic-version': '2023-06-01'
+            }
+            
+            payload = {
+                'model': 'claude-3-sonnet-20240229',
+                'max_tokens': 3000,  # More tokens for detailed feedback
+                'temperature': 0.1,  # Lower temperature for consistent grading
+                'messages': [{
+                    'role': 'user',
+                    'content': prompt
+                }]
+            }
+            
+            response = requests.post(
+                'https://api.anthropic.com/v1/messages',
+                headers=headers,
+                json=payload,
+                timeout=45  # Longer timeout for grading
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                content = result['content'][0]['text']
+                
+                # Extract JSON from response
+                json_start = content.find('{')
+                json_end = content.rfind('}') + 1
+                if json_start != -1 and json_end != -1:
+                    json_str = content[json_start:json_end]
+                    return json.loads(json_str)
+            else:
+                logger.error(f"Claude API error: {response.status_code} - {response.text}")
+            
+        except Exception as e:
+            logger.error(f"Claude grading API error: {e}")
+        
+        return None
+    
+    def _query_openai_for_grading(self, prompt: str) -> Optional[Dict[str, Any]]:
+        """Query OpenAI specifically for grading with optimized parameters"""
+        try:
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {self.openai_api_key}'
+            }
+            
+            payload = {
+                'model': 'gpt-4',
+                'messages': [{
+                    'role': 'system',
+                    'content': 'You are an expert educational assessor providing detailed, constructive feedback on quiz answers. Be thorough, fair, and encouraging while maintaining academic standards.'
+                }, {
+                    'role': 'user',
+                    'content': prompt
+                }],
+                'max_tokens': 3000,
+                'temperature': 0.1,  # Lower temperature for consistent grading
+                'presence_penalty': 0.1
+            }
+            
+            response = requests.post(
+                'https://api.openai.com/v1/chat/completions',
+                headers=headers,
+                json=payload,
+                timeout=45
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                content = result['choices'][0]['message']['content']
+                
+                # Extract JSON from response
+                json_start = content.find('{')
+                json_end = content.rfind('}') + 1
+                if json_start != -1 and json_end != -1:
+                    json_str = content[json_start:json_end]
+                    return json.loads(json_str)
+            else:
+                logger.error(f"OpenAI API error: {response.status_code} - {response.text}")
+            
+        except Exception as e:
+            logger.error(f"OpenAI grading API error: {e}")
+        
+        return None
+
 # Global analyzer instance
 content_analyzer = AIContentAnalyzer() 

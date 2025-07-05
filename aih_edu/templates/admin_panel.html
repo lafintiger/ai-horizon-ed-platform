@@ -314,6 +314,19 @@
                             </a>
                         </div>
                     </div>
+                    
+                    <div class="mb-4">
+                        <h5>System Management</h5>
+                        <p class="text-muted">Restart services and regenerate all learning content</p>
+                        <div class="action-buttons">
+                            <button class="btn btn-danger" onclick="forceRestartServices()">
+                                <i class="fas fa-sync me-1"></i>Force Restart All Services
+                            </button>
+                            <button class="btn btn-success" onclick="regenerateAllContent()">
+                                <i class="fas fa-cogs me-1"></i>Regenerate All Content
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -590,6 +603,63 @@ Or simple text format:
         // Export data
         async function exportData() {
             showAlert('info', 'Data export functionality is coming soon.');
+        }
+
+        // Force restart all services
+        async function forceRestartServices() {
+            if (!confirm('This will restart all services including content generation. This may take several minutes. Continue?')) {
+                return;
+            }
+            
+            showLoading('Restarting Services...', 'Force restarting all platform services and regenerating content...');
+            
+            try {
+                const response = await fetch('/api/admin/restart-services', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', 'All services have been restarted and content regeneration has started.');
+                    setTimeout(() => location.reload(), 3000);
+                } else {
+                    showAlert('danger', 'Error: ' + (data.error || 'Failed to restart services'));
+                }
+            } catch (error) {
+                showAlert('danger', 'Failed to restart services: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Regenerate all content
+        async function regenerateAllContent() {
+            if (!confirm('This will regenerate all learning content (questions, exercises) for all resources. This may take 10-15 minutes. Continue?')) {
+                return;
+            }
+            
+            showLoading('Regenerating Content...', 'Regenerating all learning content for all resources...');
+            
+            try {
+                const response = await fetch('/api/admin/regenerate-content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', `Content regeneration started for ${data.resources_processed} resources. This will take 10-15 minutes.`);
+                } else {
+                    showAlert('danger', 'Error: ' + (data.error || 'Failed to start content regeneration'));
+                }
+            } catch (error) {
+                showAlert('danger', 'Failed to start content regeneration: ' + error.message);
+            } finally {
+                hideLoading();
+            }
         }
 
         // Show alert

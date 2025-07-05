@@ -1,0 +1,146 @@
+{
+  "timestamp": "2025-07-04T19:09:53.281957",
+  "summary": {
+    "passed": 10,
+    "failed": 0,
+    "warnings": 0,
+    "pass_rate": 100.0
+  },
+  "details": [
+    {
+      "test": "Directory Structure",
+      "passed": true,
+      "message": "All required files present, no deprecated files found",
+      "details": {}
+    },
+    {
+      "test": "Database Content",
+      "passed": true,
+      "message": "Database healthy: 86 resources, 7 skills, 18 learning content",
+      "details": {
+        "resources": 86,
+        "skills": 7,
+        "learning_content": 18
+      }
+    },
+    {
+      "test": "Dependencies",
+      "passed": true,
+      "message": "All required Python modules available",
+      "details": {}
+    },
+    {
+      "test": "Server Running",
+      "passed": true,
+      "message": "Server responding on http://localhost:9000",
+      "details": {}
+    },
+    {
+      "test": "Server Running",
+      "passed": true,
+      "message": "Server responding on http://localhost:9000",
+      "details": {}
+    },
+    {
+      "test": "API Endpoints",
+      "passed": true,
+      "message": "All core endpoints responding correctly",
+      "details": {}
+    },
+    {
+      "test": "Server Running",
+      "passed": true,
+      "message": "Server responding on http://localhost:9000",
+      "details": {}
+    },
+    {
+      "test": "Skill Pages & Content",
+      "passed": true,
+      "message": "All 7 skill pages working, 35 quiz questions, 35 exercises available",
+      "details": {
+        "total_skills": 7,
+        "working_pages": 7,
+        "pages_with_content": 7,
+        "total_quiz_questions": 35,
+        "total_exercises": 35,
+        "skill_details": [
+          {
+            "name": "AI-Enhanced SIEM",
+            "url_name": "ai-enhanced-siem",
+            "page_loads": true,
+            "has_resources": true,
+            "quiz_questions": 5,
+            "quiz_exercises": 5,
+            "errors": []
+          },
+          {
+            "name": "Ethical Hacking and Penetration Testing",
+            "url_name": "ethical-hacking-and-penetration-testing",
+            "page_loads": true,
+            "has_resources": true,
+            "quiz_questions": 5,
+            "quiz_exercises": 5,
+            "errors": []
+          },
+          {
+            "name": "Zero Trust Architecture",
+            "url_name": "zero-trust-architecture",
+            "page_loads": true,
+            "has_resources": true,
+            "quiz_questions": 5,
+            "quiz_exercises": 5,
+            "errors": []
+          },
+          {
+            "name": "Prompt Engineering",
+            "url_name": "prompt-engineering",
+            "page_loads": true,
+            "has_resources": true,
+            "quiz_questions": 5,
+            "quiz_exercises": 5,
+            "errors": []
+          },
+          {
+            "name": "Vibe Coding",
+            "url_name": "vibe-coding",
+            "page_loads": true,
+            "has_resources": true,
+            "quiz_questions": 5,
+            "quiz_exercises": 5,
+            "errors": []
+          },
+          {
+            "name": "Cloud Security Posture Management",
+            "url_name": "cloud-security-posture-management",
+            "page_loads": true,
+            "has_resources": true,
+            "quiz_questions": 5,
+            "quiz_exercises": 5,
+            "errors": []
+          },
+          {
+            "name": "Quantum-Safe Cryptography",
+            "url_name": "quantum-safe-cryptography",
+            "page_loads": true,
+            "has_resources": true,
+            "quiz_questions": 5,
+            "quiz_exercises": 5,
+            "errors": []
+          }
+        ]
+      }
+    },
+    {
+      "test": "Port Status",
+      "passed": true,
+      "message": "Port 9000 in use by our application",
+      "details": {}
+    },
+    {
+      "test": "System Cleanup",
+      "passed": true,
+      "message": "No cleanup issues found",
+      "details": {}
+    }
+  ]
+}
