@@ -148,4 +148,14 @@ Desktop.ini
 # API Keys (extra safety)
 *api_key*
 *secret*
-config_local.py 
+config_local.py
+
+# Documentation files containing API keys
+PROJECT_STATUS.md
+DEVELOPMENT_CHECKLIST.md
+DEPLOYMENT.md
+DEPLOYMENT_GUIDE.md
+docs/COMPREHENSIVE_PROGRAM_SPECIFICATIONS.md
+
+# Scripts containing API keys
+../restart_server.sh 

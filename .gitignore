@@ -1,0 +1,5 @@
+# API Keys and sensitive files
+restart_server.sh
+
+# Include aih_edu gitignore
+aih_edu/.gitignore 
