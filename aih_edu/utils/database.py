@@ -8,10 +8,20 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
 import logging
+import os
+from urllib.parse import urlparse
 
 from .config import config
 
 logger = logging.getLogger(__name__)
+
+# Try to import PostgreSQL adapter
+try:
+    import psycopg2
+    import psycopg2.extras
+    POSTGRES_AVAILABLE = True
+except ImportError:
+    POSTGRES_AVAILABLE = False
 
 class DatabaseManager:
     """Database manager for educational resources system"""
@@ -20,333 +30,296 @@ class DatabaseManager:
         """Initialize database manager"""
         if db_path is None:
             db_path = config.get('DATABASE_URL', 'sqlite:///data/aih_edu.db')
-            # Remove 'sqlite:///' prefix if present
+        
+        self.db_url = db_path
+        self.is_postgres = self._is_postgres_url(db_path)
+        
+        if self.is_postgres:
+            if not POSTGRES_AVAILABLE:
+                raise ImportError("psycopg2 is required for PostgreSQL connections. Install with: pip install psycopg2-binary")
+            self.db_config = self._parse_postgres_url(db_path)
+        else:
+            # SQLite setup
             if db_path.startswith('sqlite:///'):
                 db_path = db_path[10:]
+            self.db_path = db_path
+            self._ensure_data_directory()
         
-        self.db_path = db_path
-        self._ensure_data_directory()
         self._initialize_database()
     
+    def _is_postgres_url(self, url: str) -> bool:
+        """Check if URL is for PostgreSQL"""
+        return url.startswith(('postgres://', 'postgresql://'))
+    
+    def _parse_postgres_url(self, url: str) -> Dict[str, Any]:
+        """Parse PostgreSQL URL into connection parameters"""
+        parsed = urlparse(url)
+        return {
+            'host': parsed.hostname,
+            'port': parsed.port or 5432,
+            'database': parsed.path[1:],  # Remove leading slash
+            'user': parsed.username,
+            'password': parsed.password
+        }
+    
     def _ensure_data_directory(self):
-        """Ensure data directory exists"""
-        data_dir = Path(self.db_path).parent
-        data_dir.mkdir(parents=True, exist_ok=True)
+        """Ensure data directory exists (SQLite only)"""
+        if not self.is_postgres:
+            data_dir = Path(self.db_path).parent
+            data_dir.mkdir(parents=True, exist_ok=True)
+    
+    def _get_connection(self):
+        """Get database connection"""
+        if self.is_postgres:
+            return psycopg2.connect(**self.db_config)
+        else:
+            return sqlite3.connect(self.db_path)
     
     def _initialize_database(self):
-        """Initialize database with required tables"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
+        """Initialize database with required tables and indexes"""
+        
+        # SQL for table creation - compatible with both SQLite and PostgreSQL
+        create_tables_sql = """
+            CREATE TABLE IF NOT EXISTS emerging_skills (
+                id SERIAL PRIMARY KEY,
+                skill_name VARCHAR(255) NOT NULL UNIQUE,
+                category VARCHAR(100),
+                urgency_score FLOAT,
+                demand_trend VARCHAR(50),
+                source_analysis TEXT,
+                description TEXT,
+                related_skills TEXT,
+                keywords TEXT,
+                job_market_data TEXT,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                discovery_status VARCHAR(50) DEFAULT 'pending'
+            );
             
-            # Educational Resources table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS educational_resources (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    url TEXT UNIQUE NOT NULL,
-                    resource_type TEXT NOT NULL,
-                    skill_category TEXT NOT NULL,
-                    learning_level TEXT NOT NULL,
-                    duration_minutes INTEGER,
-                    language TEXT DEFAULT 'en',
-                    quality_score REAL DEFAULT 0.0,
-                    popularity_score REAL DEFAULT 0.0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    metadata TEXT,  -- JSON metadata
-                    keywords TEXT,  -- Comma-separated keywords
-                    author TEXT,
-                    source TEXT,
-                    rating REAL DEFAULT 0.0,
-                    review_count INTEGER DEFAULT 0,
-                    prerequisites TEXT,  -- JSON array of prerequisites
-                    learning_outcomes TEXT,  -- JSON array of outcomes
+            CREATE TABLE IF NOT EXISTS educational_resources (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500) NOT NULL,
+                description TEXT,
+                url VARCHAR(1000) NOT NULL,
+                resource_type VARCHAR(100),
+                cost_type VARCHAR(50),
+                difficulty_level VARCHAR(50),
+                estimated_duration VARCHAR(100),
+                author VARCHAR(255),
+                publication_date DATE,
+                last_updated DATE,
+                tags TEXT,
+                skill_category VARCHAR(100),
+                quality_score FLOAT,
+                discovery_method VARCHAR(100),
+                ai_analysis_score FLOAT,
+                ai_analysis_details TEXT,
+                ai_analysis_date TIMESTAMP,
+                learning_level VARCHAR(50),
+                sequence_order INTEGER,
+                prerequisites TEXT,
+                learning_objectives TEXT,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            
+            CREATE TABLE IF NOT EXISTS skill_resources (
+                id SERIAL PRIMARY KEY,
+                skill_id INTEGER REFERENCES emerging_skills(id) ON DELETE CASCADE,
+                resource_id INTEGER REFERENCES educational_resources(id) ON DELETE CASCADE,
+                relevance_score FLOAT,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(skill_id, resource_id)
+            );
+        """
+        
+        # Additional tables for enhanced learning experience
+        additional_tables_sql = """
+            CREATE TABLE IF NOT EXISTS learning_content (
+                id SERIAL PRIMARY KEY,
+                resource_id INTEGER REFERENCES educational_resources(id) ON DELETE CASCADE,
+                skill_id INTEGER REFERENCES emerging_skills(id) ON DELETE CASCADE,
+                content_type VARCHAR(50),
+                content_data TEXT,
+                difficulty_level VARCHAR(50),
+                estimated_time_minutes INTEGER,
+                sequence_order INTEGER,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            
+            CREATE TABLE IF NOT EXISTS skill_learning_paths (
+                id SERIAL PRIMARY KEY,
+                skill_id INTEGER REFERENCES emerging_skills(id) ON DELETE CASCADE,
+                path_name VARCHAR(100),
+                description TEXT,
+                difficulty_level VARCHAR(50),
+                estimated_total_hours INTEGER,
+                sequence_order INTEGER,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            
+            CREATE TABLE IF NOT EXISTS learning_sessions (
+                id SERIAL PRIMARY KEY,
+                session_id VARCHAR(100) UNIQUE,
+                skill_id INTEGER REFERENCES emerging_skills(id),
+                user_data TEXT,
+                progress_data TEXT,
+                started_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            
+            CREATE TABLE IF NOT EXISTS content_analysis_queue (
+                id SERIAL PRIMARY KEY,
+                resource_id INTEGER REFERENCES educational_resources(id) ON DELETE CASCADE,
+                analysis_type VARCHAR(50),
+                priority INTEGER DEFAULT 3,
+                status VARCHAR(50) DEFAULT 'pending',
+                queued_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                started_date TIMESTAMP,
+                completed_date TIMESTAMP,
+                error_message TEXT,
+                retry_count INTEGER DEFAULT 0
+            );
+            
+            CREATE TABLE IF NOT EXISTS resource_questions (
+                id SERIAL PRIMARY KEY,
+                resource_id INTEGER REFERENCES educational_resources(id) ON DELETE CASCADE,
+                questions_data TEXT,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            
+            CREATE TABLE IF NOT EXISTS resource_exercises (
+                id SERIAL PRIMARY KEY,
+                resource_id INTEGER REFERENCES educational_resources(id) ON DELETE CASCADE,
+                exercises_data TEXT,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """
+        
+        if self.is_postgres:
+            # PostgreSQL-specific initialization
+            with self._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    # Replace SERIAL with appropriate PostgreSQL syntax
+                    postgres_sql = create_tables_sql.replace('SERIAL', 'SERIAL')
+                    postgres_additional = additional_tables_sql.replace('SERIAL', 'SERIAL')
                     
-                    -- Enhanced Learning Experience Fields
-                    difficulty_level TEXT DEFAULT 'unknown',  -- beginner|intermediate|advanced|expert
-                    cost_type TEXT DEFAULT 'unknown',         -- free|freemium|paid
-                    estimated_duration INTEGER DEFAULT 0,    -- minutes (more precise than duration_minutes)
-                    learning_objectives TEXT DEFAULT '[]',   -- AI-extracted learning goals (JSON)
-                    sequence_order INTEGER DEFAULT 0,        -- optimal learning order within skill
-                    ai_analysis_date TIMESTAMP,              -- when AI analysis was performed
-                    admin_reviewed BOOLEAN DEFAULT 0,        -- human-reviewed flag
-                    content_extracted TEXT,                  -- extracted content for AI analysis (JSON)
-                    source_platform TEXT                     -- youtube|coursera|udemy|github|etc
-                )
-            ''')
+                    cursor.execute(postgres_sql)
+                    cursor.execute(postgres_additional)
+                    
+                    # Create indexes
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_skill_resources_skill ON skill_resources(skill_id)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_skill_resources_resource ON skill_resources(resource_id)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_quality ON educational_resources(quality_score)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_category ON educational_resources(skill_category)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_type ON educational_resources(resource_type)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_difficulty ON educational_resources(difficulty_level)')
+                    cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_cost ON educational_resources(cost_type)')
+                    
+                conn.commit()
+        else:
+            # SQLite initialization
+            sqlite_sql = create_tables_sql.replace('SERIAL PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT')
+            sqlite_sql = sqlite_sql.replace('TIMESTAMP', 'TEXT')
+            sqlite_sql = sqlite_sql.replace('VARCHAR(255)', 'TEXT')
+            sqlite_sql = sqlite_sql.replace('VARCHAR(100)', 'TEXT')
+            sqlite_sql = sqlite_sql.replace('VARCHAR(500)', 'TEXT')
+            sqlite_sql = sqlite_sql.replace('VARCHAR(1000)', 'TEXT')
+            sqlite_sql = sqlite_sql.replace('VARCHAR(50)', 'TEXT')
+            sqlite_sql = sqlite_sql.replace('FLOAT', 'REAL')
+            sqlite_sql = sqlite_sql.replace('REFERENCES', 'REFERENCES')
+            sqlite_sql = sqlite_sql.replace('ON DELETE CASCADE', '')
             
-            # User Preferences table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS user_preferences (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id TEXT NOT NULL,
-                    skill_interests TEXT,  -- JSON array of skills
-                    learning_level TEXT DEFAULT 'intermediate',
-                    preferred_resource_types TEXT,  -- JSON array
-                    preferred_duration_range TEXT,  -- JSON object {min, max}
-                    language_preferences TEXT,  -- JSON array
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(user_id)
-                )
-            ''')
+            sqlite_additional = additional_tables_sql.replace('SERIAL PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT')
+            sqlite_additional = sqlite_additional.replace('TIMESTAMP', 'TEXT')
+            sqlite_additional = sqlite_additional.replace('VARCHAR(255)', 'TEXT')
+            sqlite_additional = sqlite_additional.replace('VARCHAR(100)', 'TEXT')
+            sqlite_additional = sqlite_additional.replace('VARCHAR(50)', 'TEXT')
+            sqlite_additional = sqlite_additional.replace('REFERENCES', 'REFERENCES')
+            sqlite_additional = sqlite_additional.replace('ON DELETE CASCADE', '')
             
-            # Learning Paths table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS learning_paths (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    skill_category TEXT NOT NULL,
-                    difficulty_level TEXT NOT NULL,
-                    estimated_hours INTEGER,
-                    created_by TEXT,
-                    resource_sequence TEXT,  -- JSON array of resource IDs in order
-                    prerequisites TEXT,  -- JSON array of prerequisites
-                    learning_outcomes TEXT,  -- JSON array of outcomes
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    is_public BOOLEAN DEFAULT 1,
-                    rating REAL DEFAULT 0.0,
-                    completion_count INTEGER DEFAULT 0
-                )
-            ''')
-            
-            # User Progress table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS user_progress (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id TEXT NOT NULL,
-                    resource_id INTEGER,
-                    learning_path_id INTEGER,
-                    progress_percentage REAL DEFAULT 0.0,
-                    completion_status TEXT DEFAULT 'not_started',  -- not_started, in_progress, completed
-                    time_spent_minutes INTEGER DEFAULT 0,
-                    last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    notes TEXT,
-                    rating REAL,
-                    FOREIGN KEY (resource_id) REFERENCES educational_resources (id),
-                    FOREIGN KEY (learning_path_id) REFERENCES learning_paths (id)
-                )
-            ''')
-            
-            # Resource Collections table (curated lists)
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS resource_collections (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    created_by TEXT NOT NULL,
-                    resource_ids TEXT,  -- JSON array of resource IDs
-                    tags TEXT,  -- JSON array of tags
-                    is_public BOOLEAN DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    view_count INTEGER DEFAULT 0,
-                    like_count INTEGER DEFAULT 0
-                )
-            ''')
-            
-            # Search History table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS search_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id TEXT,
-                    search_query TEXT NOT NULL,
-                    skill_category TEXT,
-                    learning_level TEXT,
-                    resource_type TEXT,
-                    results_count INTEGER DEFAULT 0,
-                    search_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    filters_applied TEXT  -- JSON object of applied filters
-                )
-            ''')
-            
-            # Emerging Skills table (from main platform analysis)
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS emerging_skills (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    skill_name TEXT NOT NULL UNIQUE,
-                    category TEXT NOT NULL,
-                    urgency_score REAL DEFAULT 0.0,
-                    demand_trend TEXT DEFAULT 'stable',  -- 'rising', 'stable', 'critical'
-                    source_analysis TEXT,  -- Which analysis identified this skill
-                    identified_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    job_market_data TEXT,  -- JSON with supporting data
-                    related_skills TEXT,  -- JSON array of related/prerequisite skills
-                    description TEXT,
-                    auto_discovered BOOLEAN DEFAULT 1,
-                    resource_discovery_status TEXT DEFAULT 'pending'  -- 'pending', 'in_progress', 'completed'
-                )
-            ''')
-            
-            # Skill-Resource Mapping table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS skill_resource_mapping (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    skill_id INTEGER REFERENCES emerging_skills(id),
-                    resource_id INTEGER REFERENCES educational_resources(id),
-                    relevance_score REAL DEFAULT 0.0,
-                    resource_type_for_skill TEXT,  -- 'foundation', 'practical', 'advanced', 'certification'
-                    auto_discovered BOOLEAN DEFAULT 1,
-                    discovery_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (skill_id) REFERENCES emerging_skills (id),
-                    FOREIGN KEY (resource_id) REFERENCES educational_resources (id)
-                )
-            ''')
-
-            # AI-Generated Learning Content table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS learning_content (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    resource_id INTEGER REFERENCES educational_resources(id),
-                    skill_id INTEGER REFERENCES emerging_skills(id),
-                    content_type TEXT NOT NULL,  -- 'questions'|'projects'|'summary'|'objectives'
-                    content_data TEXT NOT NULL,  -- JSON with questions/projects/etc
-                    ai_model_used TEXT,          -- 'claude-3'|'gpt-4'|'combined'
-                    ai_generated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    admin_approved BOOLEAN DEFAULT 0,
-                    admin_modified TEXT DEFAULT NULL,  -- admin edits/additions (JSON)
-                    quality_score REAL DEFAULT 0.0,    -- quality of generated content
-                    usage_count INTEGER DEFAULT 0,     -- how often content is accessed
-                    feedback_rating REAL DEFAULT 0.0,  -- user feedback on content quality
-                    FOREIGN KEY (resource_id) REFERENCES educational_resources (id),
-                    FOREIGN KEY (skill_id) REFERENCES emerging_skills (id)
-                )
-            ''')
-            
-            # Enhanced Learning Paths for Skills
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS skill_learning_paths (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    skill_id INTEGER REFERENCES emerging_skills(id),
-                    path_name TEXT NOT NULL,  -- 'beginner'|'intermediate'|'advanced'|'expert'
-                    path_description TEXT,
-                    resource_sequence TEXT NOT NULL,  -- JSON array of resource IDs in optimal order
-                    estimated_duration INTEGER,       -- total minutes for path
-                    difficulty_progression TEXT,      -- JSON showing difficulty curve
-                    prerequisites TEXT DEFAULT '[]',  -- JSON array of required skills/knowledge
-                    learning_milestones TEXT DEFAULT '[]',  -- JSON array of checkpoints
-                    completion_projects TEXT DEFAULT '[]',  -- JSON array of final projects
-                    ai_generated BOOLEAN DEFAULT 1,
-                    admin_curated BOOLEAN DEFAULT 0,
-                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    usage_count INTEGER DEFAULT 0,
-                    completion_rate REAL DEFAULT 0.0,  -- percentage of users who complete
-                    FOREIGN KEY (skill_id) REFERENCES emerging_skills (id)
-                )
-            ''')
-            
-            # Learning Progress Tracking (Session-based for anonymous users)
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS learning_sessions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id TEXT NOT NULL,  -- browser session or generated ID
-                    skill_id INTEGER REFERENCES emerging_skills(id),
-                    learning_path_id INTEGER REFERENCES skill_learning_paths(id),
-                    current_resource_id INTEGER REFERENCES educational_resources(id),
-                    resources_completed TEXT DEFAULT '[]',  -- JSON array of completed resource IDs
-                    questions_answered TEXT DEFAULT '{}',   -- JSON object of question responses
-                    projects_completed TEXT DEFAULT '[]',   -- JSON array of completed projects
-                    progress_percentage REAL DEFAULT 0.0,
-                    time_spent_minutes INTEGER DEFAULT 0,
-                    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    learning_preferences TEXT DEFAULT '{}', -- JSON object of user preferences
-                    FOREIGN KEY (skill_id) REFERENCES emerging_skills (id),
-                    FOREIGN KEY (learning_path_id) REFERENCES skill_learning_paths (id),
-                    FOREIGN KEY (current_resource_id) REFERENCES educational_resources (id)
-                )
-            ''')
-            
-            # Content Analysis Queue
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS content_analysis_queue (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    resource_id INTEGER REFERENCES educational_resources(id),
-                    analysis_type TEXT DEFAULT 'full',  -- 'full'|'update'|'questions_only'|'projects_only'
-                    priority INTEGER DEFAULT 1,         -- 1=high, 2=medium, 3=low
-                    status TEXT DEFAULT 'pending',      -- 'pending'|'processing'|'completed'|'failed'
-                    retry_count INTEGER DEFAULT 0,
-                    error_message TEXT,
-                    queued_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    started_date TIMESTAMP,
-                    completed_date TIMESTAMP,
-                    FOREIGN KEY (resource_id) REFERENCES educational_resources (id)
-                )
-            ''')
-
-            # Create indexes for better performance
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_category ON educational_resources(skill_category)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_level ON educational_resources(learning_level)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_type ON educational_resources(resource_type)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_quality ON educational_resources(quality_score)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_progress_user ON user_progress(user_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_search_user ON search_history(user_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_emerging_skills_urgency ON emerging_skills(urgency_score)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_skill_mapping ON skill_resource_mapping(skill_id, resource_id)')
-            
-            # Enhanced Learning Experience Indexes
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_difficulty ON educational_resources(difficulty_level)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_cost ON educational_resources(cost_type)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_sequence ON educational_resources(sequence_order)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_ai_analyzed ON educational_resources(ai_analysis_date)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_learning_content_resource ON learning_content(resource_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_learning_content_skill ON learning_content(skill_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_learning_content_type ON learning_content(content_type)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_skill_paths_skill ON skill_learning_paths(skill_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_learning_sessions_session ON learning_sessions(session_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_learning_sessions_skill ON learning_sessions(skill_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_analysis_queue_status ON content_analysis_queue(status)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_analysis_queue_priority ON content_analysis_queue(priority)')
-            
-            conn.commit()
-            logger.info("Educational resources database initialized successfully")
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.executescript(sqlite_sql)
+                cursor.executescript(sqlite_additional)
+                
+                # Create indexes for SQLite
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_skill_resources_skill ON skill_resources(skill_id)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_skill_resources_resource ON skill_resources(resource_id)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_quality ON educational_resources(quality_score)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_category ON educational_resources(skill_category)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_type ON educational_resources(resource_type)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_difficulty ON educational_resources(difficulty_level)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_resources_cost ON educational_resources(cost_type)')
+                
+                conn.commit()
+        
+        logger.info("Educational resources database initialized successfully")
     
-    def add_resource(self, resource_data: Dict[str, Any]) -> int:
+    def add_resource(self, resource_data: Dict[str, Any]) -> Optional[int]:
         """Add a new educational resource"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            
-            # Prepare data
-            metadata = json.dumps(resource_data.get('metadata', {}))
-            prerequisites = json.dumps(resource_data.get('prerequisites', []))
-            learning_outcomes = json.dumps(resource_data.get('learning_outcomes', []))
-            keywords = ','.join(resource_data.get('keywords', []))
-            
-            cursor.execute('''
-                INSERT INTO educational_resources 
-                (title, description, url, resource_type, skill_category, learning_level,
-                 duration_minutes, language, quality_score, popularity_score, metadata,
-                 keywords, author, source, rating, review_count, prerequisites, learning_outcomes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                resource_data['title'],
-                resource_data.get('description', ''),
-                resource_data['url'],
-                resource_data['resource_type'],
-                resource_data['skill_category'],
-                resource_data['learning_level'],
-                resource_data.get('duration_minutes', 0),
-                resource_data.get('language', 'en'),
-                resource_data.get('quality_score', 0.0),
-                resource_data.get('popularity_score', 0.0),
-                metadata,
-                keywords,
-                resource_data.get('author', ''),
-                resource_data.get('source', ''),
-                resource_data.get('rating', 0.0),
-                resource_data.get('review_count', 0),
-                prerequisites,
-                learning_outcomes
-            ))
-            
-            resource_id = cursor.lastrowid
-            conn.commit()
-            logger.info(f"Added educational resource: {resource_data['title']} (ID: {resource_id})")
-            return resource_id
+        try:
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            INSERT INTO educational_resources 
+                            (title, description, url, resource_type, cost_type, difficulty_level,
+                             estimated_duration, author, tags, skill_category, quality_score,
+                             discovery_method, learning_level, prerequisites, learning_objectives)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            RETURNING id
+                        """, (
+                            resource_data['title'],
+                            resource_data.get('description', ''),
+                            resource_data['url'],
+                            resource_data.get('resource_type', ''),
+                            resource_data.get('cost_type', 'unknown'),
+                            resource_data.get('difficulty_level', 'unknown'),
+                            resource_data.get('estimated_duration', ''),
+                            resource_data.get('author', ''),
+                            resource_data.get('tags', ''),
+                            resource_data.get('skill_category', ''),
+                            resource_data.get('quality_score', 0.0),
+                            resource_data.get('discovery_method', ''),
+                            resource_data.get('learning_level', ''),
+                            json.dumps(resource_data.get('prerequisites', [])),
+                            json.dumps(resource_data.get('learning_objectives', []))
+                        ))
+                        resource_id = cursor.fetchone()[0]
+                        conn.commit()
+                        return resource_id
+                else:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT INTO educational_resources 
+                        (title, description, url, resource_type, cost_type, difficulty_level,
+                         estimated_duration, author, tags, skill_category, quality_score,
+                         discovery_method, learning_level, prerequisites, learning_objectives)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        resource_data['title'],
+                        resource_data.get('description', ''),
+                        resource_data['url'],
+                        resource_data.get('resource_type', ''),
+                        resource_data.get('cost_type', 'unknown'),
+                        resource_data.get('difficulty_level', 'unknown'),
+                        resource_data.get('estimated_duration', ''),
+                        resource_data.get('author', ''),
+                        resource_data.get('tags', ''),
+                        resource_data.get('skill_category', ''),
+                        resource_data.get('quality_score', 0.0),
+                        resource_data.get('discovery_method', ''),
+                        resource_data.get('learning_level', ''),
+                        json.dumps(resource_data.get('prerequisites', [])),
+                        json.dumps(resource_data.get('learning_objectives', []))
+                    ))
+                    resource_id = cursor.lastrowid
+                    conn.commit()
+                    return resource_id
+                    
+        except Exception as e:
+            logger.error(f"Error adding resource: {e}")
+            return None
     
     def search_resources(self, 
                         query: Optional[str] = None,
@@ -508,59 +481,96 @@ class DatabaseManager:
             conn.commit()
     
     def add_emerging_skill(self, skill_data: Dict[str, Any]) -> int:
-        """Add a new emerging skill"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            
-            # Prepare JSON data
-            job_market_data = json.dumps(skill_data.get('job_market_data', {}))
-            related_skills = json.dumps(skill_data.get('related_skills', []))
-            
-            cursor.execute('''
-                INSERT OR REPLACE INTO emerging_skills 
-                (skill_name, category, urgency_score, demand_trend, source_analysis,
-                 job_market_data, related_skills, description, auto_discovered)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                skill_data['skill_name'],
-                skill_data.get('category', 'cybersecurity'),
-                skill_data.get('urgency_score', 0.0),
-                skill_data.get('demand_trend', 'stable'),
-                skill_data.get('source_analysis', 'manual'),
-                job_market_data,
-                related_skills,
-                skill_data.get('description', ''),
-                skill_data.get('auto_discovered', True)
-            ))
-            
-            skill_id = cursor.lastrowid
-            conn.commit()
-            logger.info(f"Added emerging skill: {skill_data['skill_name']} (ID: {skill_id})")
-            return skill_id
-    
-    def get_emerging_skills(self, limit: int = 50, urgency_threshold: float = 0.0) -> List[Dict[str, Any]]:
-        """Get emerging skills ordered by urgency"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                SELECT * FROM emerging_skills 
-                WHERE urgency_score >= ?
-                ORDER BY urgency_score DESC, identified_date DESC
-                LIMIT ?
-            ''', (urgency_threshold, limit))
-            
-            rows = cursor.fetchall()
-            skills = []
-            for row in rows:
-                skill = dict(row)
-                skill['job_market_data'] = json.loads(skill['job_market_data'] or '{}')
-                skill['related_skills'] = json.loads(skill['related_skills'] or '[]')
-                skills.append(skill)
-            
-            return skills
-    
+        """Add a new emerging skill to the database"""
+        try:
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            INSERT INTO emerging_skills 
+                            (skill_name, category, urgency_score, demand_trend, source_analysis, 
+                             description, related_skills, keywords, job_market_data)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            RETURNING id
+                        """, (
+                            skill_data['skill_name'],
+                            skill_data.get('category', ''),
+                            skill_data.get('urgency_score', 0.0),
+                            skill_data.get('demand_trend', 'stable'),
+                            skill_data.get('source_analysis', ''),
+                            skill_data.get('description', ''),
+                            json.dumps(skill_data.get('related_skills', [])),
+                            skill_data.get('keywords', ''),
+                            json.dumps(skill_data.get('job_market_data', {}))
+                        ))
+                        skill_id = cursor.fetchone()[0]
+                        conn.commit()
+                        return skill_id
+                else:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT INTO emerging_skills 
+                        (skill_name, category, urgency_score, demand_trend, source_analysis, 
+                         description, related_skills, keywords, job_market_data)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        skill_data['skill_name'],
+                        skill_data.get('category', ''),
+                        skill_data.get('urgency_score', 0.0),
+                        skill_data.get('demand_trend', 'stable'),
+                        skill_data.get('source_analysis', ''),
+                        skill_data.get('description', ''),
+                        json.dumps(skill_data.get('related_skills', [])),
+                        skill_data.get('keywords', ''),
+                        json.dumps(skill_data.get('job_market_data', {}))
+                    ))
+                    skill_id = cursor.lastrowid
+                    conn.commit()
+                    return skill_id
+                    
+        except Exception as e:
+            logger.error(f"Error adding emerging skill: {e}")
+            return None
+
+    def get_emerging_skills(self, limit: int = None) -> List[Dict[str, Any]]:
+        """Get all emerging skills or limit to specific number"""
+        try:
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    conn.cursor_factory = psycopg2.extras.RealDictCursor
+                    with conn.cursor() as cursor:
+                        query = "SELECT * FROM emerging_skills ORDER BY urgency_score DESC"
+                        if limit:
+                            query += f" LIMIT {limit}"
+                        cursor.execute(query)
+                        rows = cursor.fetchall()
+                        skills = []
+                        for row in rows:
+                            skill = dict(row)
+                            skill['job_market_data'] = json.loads(skill['job_market_data'] or '{}')
+                            skill['related_skills'] = json.loads(skill['related_skills'] or '[]')
+                            skills.append(skill)
+                        return skills
+                else:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    query = "SELECT * FROM emerging_skills ORDER BY urgency_score DESC"
+                    if limit:
+                        query += f" LIMIT {limit}"
+                    cursor.execute(query)
+                    rows = cursor.fetchall()
+                    skills = []
+                    for row in rows:
+                        skill = dict(row)
+                        skill['job_market_data'] = json.loads(skill['job_market_data'] or '{}')
+                        skill['related_skills'] = json.loads(skill['related_skills'] or '[]')
+                        skills.append(skill)
+                    return skills
+                    
+        except Exception as e:
+            logger.error(f"Error getting emerging skills: {e}")
+            return []
+
     def update_skill_discovery_status(self, skill_id: int, status: str) -> None:
         """Update resource discovery status for a skill"""
         with sqlite3.connect(self.db_path) as conn:
@@ -572,43 +582,60 @@ class DatabaseManager:
             ''', (status, datetime.now().isoformat(), skill_id))
             conn.commit()
     
-    def link_skill_to_resource(self, skill_id: int, resource_id: int, relevance_score: float, 
-                              resource_type_for_skill: str = 'general') -> None:
-        """Link an emerging skill to an educational resource"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT OR REPLACE INTO skill_resource_mapping
-                (skill_id, resource_id, relevance_score, resource_type_for_skill)
-                VALUES (?, ?, ?, ?)
-            ''', (skill_id, resource_id, relevance_score, resource_type_for_skill))
-            conn.commit()
+    def link_skill_to_resource(self, skill_id: int, resource_id: int, relevance_score: float = 1.0) -> bool:
+        """Link a skill to a resource"""
+        try:
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            INSERT INTO skill_resources (skill_id, resource_id, relevance_score)
+                            VALUES (%s, %s, %s)
+                            ON CONFLICT (skill_id, resource_id) DO UPDATE SET
+                            relevance_score = EXCLUDED.relevance_score
+                        """, (skill_id, resource_id, relevance_score))
+                else:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO skill_resources (skill_id, resource_id, relevance_score)
+                        VALUES (?, ?, ?)
+                    """, (skill_id, resource_id, relevance_score))
+                conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error linking skill {skill_id} to resource {resource_id}: {e}")
+            return False
     
     def get_resources_for_skill(self, skill_id: int) -> List[Dict[str, Any]]:
         """Get all resources linked to a specific skill"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                SELECT er.*, srm.relevance_score, srm.resource_type_for_skill
-                FROM educational_resources er
-                JOIN skill_resource_mapping srm ON er.id = srm.resource_id
-                WHERE srm.skill_id = ?
-                ORDER BY srm.relevance_score DESC, er.quality_score DESC
-            ''', (skill_id,))
-            
-            rows = cursor.fetchall()
-            resources = []
-            for row in rows:
-                resource = dict(row)
-                resource['metadata'] = json.loads(resource['metadata'] or '{}')
-                resource['prerequisites'] = json.loads(resource['prerequisites'] or '[]')
-                resource['learning_outcomes'] = json.loads(resource['learning_outcomes'] or '[]')
-                resource['keywords'] = [k.strip() for k in (resource['keywords'] or '').split(',') if k.strip()]
-                resources.append(resource)
-            
-            return resources
+        try:
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    conn.cursor_factory = psycopg2.extras.RealDictCursor
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT er.*, sr.relevance_score
+                            FROM educational_resources er
+                            JOIN skill_resources sr ON er.id = sr.resource_id
+                            WHERE sr.skill_id = %s
+                            ORDER BY sr.relevance_score DESC, er.quality_score DESC
+                        """, (skill_id,))
+                        return [dict(row) for row in cursor.fetchall()]
+                else:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT er.*, sr.relevance_score
+                        FROM educational_resources er
+                        JOIN skill_resources sr ON er.id = sr.resource_id
+                        WHERE sr.skill_id = ?
+                        ORDER BY sr.relevance_score DESC, er.quality_score DESC
+                    """, (skill_id,))
+                    return [dict(row) for row in cursor.fetchall()]
+                    
+        except Exception as e:
+            logger.error(f"Error getting resources for skill {skill_id}: {e}")
+            return []
 
     # =============================================================================
     # ENHANCED LEARNING EXPERIENCE METHODS
@@ -991,23 +1018,31 @@ class DatabaseManager:
     def get_all_resources(self):
         """Get all educational resources"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT id, title, description, resource_type, cost_type, difficulty_level,
-                           url, quality_score, learning_level, author, estimated_duration, skill_category
-                    FROM educational_resources
-                    ORDER BY quality_score DESC
-                """)
-                
-                columns = [desc[0] for desc in cursor.description]
-                resources = []
-                
-                for row in cursor.fetchall():
-                    resource = dict(zip(columns, row))
-                    resources.append(resource)
-                
-                return resources
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    conn.cursor_factory = psycopg2.extras.RealDictCursor
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT id, title, description, resource_type, cost_type, difficulty_level,
+                                   url, quality_score, learning_level, author, estimated_duration, skill_category
+                            FROM educational_resources
+                            ORDER BY quality_score DESC
+                        """)
+                        return [dict(row) for row in cursor.fetchall()]
+                else:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT id, title, description, resource_type, cost_type, difficulty_level,
+                               url, quality_score, learning_level, author, estimated_duration, skill_category
+                        FROM educational_resources
+                        ORDER BY quality_score DESC
+                    """)
+                    columns = [desc[0] for desc in cursor.description]
+                    resources = []
+                    for row in cursor.fetchall():
+                        resource = dict(zip(columns, row))
+                        resources.append(resource)
+                    return resources
         except Exception as e:
             logger.error(f"Error getting all resources: {e}")
             return []
@@ -1015,23 +1050,37 @@ class DatabaseManager:
     def get_all_skills(self):
         """Get all emerging skills from the database"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT * FROM emerging_skills 
-                    ORDER BY skill_name ASC
-                """)
-                
-                rows = cursor.fetchall()
-                skills = []
-                for row in rows:
-                    skill = dict(row)
-                    skill['job_market_data'] = json.loads(skill['job_market_data'] or '{}')
-                    skill['related_skills'] = json.loads(skill['related_skills'] or '[]')
-                    skills.append(skill)
-                
-                return skills
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    conn.cursor_factory = psycopg2.extras.RealDictCursor
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT * FROM emerging_skills 
+                            ORDER BY skill_name ASC
+                        """)
+                        rows = cursor.fetchall()
+                        skills = []
+                        for row in rows:
+                            skill = dict(row)
+                            skill['job_market_data'] = json.loads(skill['job_market_data'] or '{}')
+                            skill['related_skills'] = json.loads(skill['related_skills'] or '[]')
+                            skills.append(skill)
+                        return skills
+                else:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT * FROM emerging_skills 
+                        ORDER BY skill_name ASC
+                    """)
+                    rows = cursor.fetchall()
+                    skills = []
+                    for row in rows:
+                        skill = dict(row)
+                        skill['job_market_data'] = json.loads(skill['job_market_data'] or '{}')
+                        skill['related_skills'] = json.loads(skill['related_skills'] or '[]')
+                        skills.append(skill)
+                    return skills
         except Exception as e:
             logger.error(f"Error getting all skills: {e}")
             return []
