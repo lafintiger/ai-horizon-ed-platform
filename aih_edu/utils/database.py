@@ -1046,23 +1046,43 @@ class DatabaseManager:
     
     def get_learning_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get learning session data"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                SELECT * FROM learning_sessions WHERE session_id = ?
-            ''', (session_id,))
-            
-            row = cursor.fetchone()
-            if row:
-                session = dict(row)
-                session['resources_completed'] = json.loads(session['resources_completed'] or '[]')
-                session['questions_answered'] = json.loads(session['questions_answered'] or '{}')
-                session['projects_completed'] = json.loads(session['projects_completed'] or '[]')
-                session['learning_preferences'] = json.loads(session['learning_preferences'] or '{}')
-                return session
-            
+        try:
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    conn.cursor_factory = psycopg2.extras.RealDictCursor
+                    with conn.cursor() as cursor:
+                        cursor.execute('''
+                            SELECT * FROM learning_sessions WHERE session_id = %s
+                        ''', (session_id,))
+                        
+                        row = cursor.fetchone()
+                        if row:
+                            session = dict(row)
+                            session['resources_completed'] = json.loads(session['resources_completed'] or '[]')
+                            session['questions_answered'] = json.loads(session['questions_answered'] or '{}')
+                            session['projects_completed'] = json.loads(session['projects_completed'] or '[]')
+                            session['learning_preferences'] = json.loads(session['learning_preferences'] or '{}')
+                            return session
+                else:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    
+                    cursor.execute('''
+                        SELECT * FROM learning_sessions WHERE session_id = ?
+                    ''', (session_id,))
+                    
+                    row = cursor.fetchone()
+                    if row:
+                        session = dict(row)
+                        session['resources_completed'] = json.loads(session['resources_completed'] or '[]')
+                        session['questions_answered'] = json.loads(session['questions_answered'] or '{}')
+                        session['projects_completed'] = json.loads(session['projects_completed'] or '[]')
+                        session['learning_preferences'] = json.loads(session['learning_preferences'] or '{}')
+                        return session
+                
+                return None
+        except Exception as e:
+            logger.error(f"Error getting learning session {session_id}: {e}")
             return None
 
     def update_resource_categorization(self, resource_id, cost_type, difficulty_level):
