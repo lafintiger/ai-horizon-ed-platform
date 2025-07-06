@@ -1400,28 +1400,29 @@ def normalize_skill_name_from_url(url_skill_name: str) -> str:
     for skill in skills:
         skill_normalized = skill['skill_name'].lower().strip()
         
-        # Handle common variations:
-        # - "ai enhanced siem" should match "AI-Enhanced SIEM"
-        # - "quantum safe cryptography" should match "Quantum-Safe Cryptography" 
-        # - "ethical hacking and penetration testing" variations
+        # Normalize both for comparison (handle common variations)
+        skill_clean = skill_normalized.replace('-', ' ').replace('&', 'and').strip()
+        url_clean = url_normalized.replace('-', ' ').replace('&', 'and').strip()
         
-        skill_words = skill_normalized.replace('-', ' ').split()
-        url_words = url_normalized.split()
+        # Direct match
+        if skill_clean == url_clean:
+            return skill['skill_name']
         
-        # If all URL words are found in skill name (in order), it's a match
-        if len(url_words) <= len(skill_words):
-            skill_text = ' '.join(skill_words)
-            url_text = ' '.join(url_words)
-            
-            # Remove common variations for better matching
-            skill_clean = skill_text.replace('&', 'and').replace('-', ' ')
-            url_clean = url_text.replace('&', 'and').replace('-', ' ')
-            
-            if url_clean in skill_clean or skill_clean in url_clean:
+        # Check if they're equivalent (handle extra spaces, punctuation)
+        skill_words = skill_clean.split()
+        url_words = url_clean.split()
+        
+        # If all words match (in order), it's a match
+        if len(skill_words) == len(url_words):
+            if all(s == u for s, u in zip(skill_words, url_words)):
                 return skill['skill_name']
+        
+        # Partial match - if URL words are a subset of skill words
+        if all(word in skill_words for word in url_words):
+            return skill['skill_name']
     
-    # If no match found, return the original normalized name
-    return url_normalized
+    # If no match found, raise ValueError to trigger 404
+    raise ValueError(f"Skill '{url_skill_name}' not found in database")
 
 # =============================================================================
 # ENHANCED LEARNING EXPERIENCE API ENDPOINTS
