@@ -89,13 +89,13 @@ class LearningExperienceService:
     def create_learning_session(self, skill_id: int, learning_path_id: Optional[int] = None) -> str:
         """Create a new anonymous learning session"""
         session_id = str(uuid.uuid4())
-        db_manager.create_learning_session(session_id, skill_id, learning_path_id)
+        self.db_manager.create_learning_session(session_id, skill_id, learning_path_id)
         logger.info(f"Created learning session {session_id} for skill {skill_id}")
         return session_id
     
     def update_learning_progress(self, session_id: str, progress_update: Dict[str, Any]) -> Dict[str, Any]:
         """Update learning progress for a session"""
-        session_data = db_manager.get_learning_session(session_id)
+        session_data = self.db_manager.get_learning_session(session_id)
         if not session_data:
             raise ValueError(f"Session {session_id} not found")
         
@@ -123,12 +123,12 @@ class LearningExperienceService:
         
         # Calculate progress percentage
         skill_id = session_data['skill_id']
-        total_resources = len(db_manager.get_enhanced_resources_for_skill(skill_id))
+        total_resources = len(self.db_manager.get_enhanced_resources_for_skill(skill_id))
         completed_resources = len(updated_progress['resources_completed'])
         updated_progress['progress_percentage'] = (completed_resources / max(total_resources, 1)) * 100
         
         # Update database
-        db_manager.update_learning_progress(session_id, updated_progress)
+        self.db_manager.update_learning_progress(session_id, updated_progress)
         
         logger.info(f"Updated progress for session {session_id}: {updated_progress['progress_percentage']:.1f}% complete")
         
@@ -136,11 +136,11 @@ class LearningExperienceService:
     
     def get_resource_learning_content(self, resource_id: int, content_type: Optional[str] = None) -> Dict[str, Any]:
         """Get enhanced learning content for a specific resource"""
-        resource = db_manager.get_resource_by_id(resource_id)
+        resource = self.db_manager.get_resource_by_id(resource_id)
         if not resource:
             raise ValueError(f"Resource {resource_id} not found")
         
-        learning_content = db_manager.get_learning_content(resource_id, content_type)
+        learning_content = self.db_manager.get_learning_content(resource_id, content_type)
         
         # Organize content by type
         content_by_type = defaultdict(list)
@@ -158,12 +158,12 @@ class LearningExperienceService:
     def answer_comprehension_question(self, session_id: str, resource_id: int, 
                                     question_id: int, answer: str) -> Dict[str, Any]:
         """Process a comprehension question answer"""
-        session_data = db_manager.get_learning_session(session_id)
+        session_data = self.db_manager.get_learning_session(session_id)
         if not session_data:
             raise ValueError(f"Session {session_id} not found")
         
         # Get the question
-        learning_content = db_manager.get_learning_content(resource_id, 'questions')
+        learning_content = self.db_manager.get_learning_content(resource_id, 'questions')
         question = None
         for content in learning_content:
             for q in content['content_data'].get('questions', []):
@@ -205,7 +205,7 @@ class LearningExperienceService:
     def complete_project(self, session_id: str, resource_id: int, project_id: int, 
                         completion_data: Dict[str, Any]) -> Dict[str, Any]:
         """Mark a project as completed"""
-        session_data = db_manager.get_learning_session(session_id)
+        session_data = self.db_manager.get_learning_session(session_id)
         if not session_data:
             raise ValueError(f"Session {session_id} not found")
         
@@ -232,18 +232,18 @@ class LearningExperienceService:
     
     def queue_skill_for_analysis(self, skill_name: str, priority: int = 1) -> Dict[str, Any]:
         """Queue all resources for a skill for AI analysis"""
-        skills = db_manager.get_emerging_skills()
+        skills = self.db_manager.get_emerging_skills()
         skill = next((s for s in skills if s['skill_name'].lower() == skill_name.lower()), None)
         
         if not skill:
             raise ValueError(f"Skill '{skill_name}' not found")
         
-        resources = db_manager.get_resources_for_skill(skill['id'])
+        resources = self.db_manager.get_resources_for_skill(skill['id'])
         queued_count = 0
         
         for resource in resources:
             if not resource.get('ai_analysis_date'):  # Only queue if not already analyzed
-                db_manager.queue_content_analysis(resource['id'], 'full', priority)
+                self.db_manager.queue_content_analysis(resource['id'], 'full', priority)
                 queued_count += 1
         
         logger.info(f"Queued {queued_count} resources for analysis for skill: {skill_name}")
@@ -257,7 +257,7 @@ class LearningExperienceService:
     
     def process_analysis_queue(self, batch_size: int = 5) -> Dict[str, Any]:
         """Process queued resources for analysis"""
-        queue_items = db_manager.get_analysis_queue('pending', batch_size)
+        queue_items = self.db_manager.get_analysis_queue('pending', batch_size)
         
         processed = 0
         errors = []
@@ -265,23 +265,23 @@ class LearningExperienceService:
         for item in queue_items:
             try:
                 # Update status to processing
-                db_manager.update_analysis_queue_status(item['id'], 'processing')
+                self.db_manager.update_analysis_queue_status(item['id'], 'processing')
                 
                 # Perform analysis
-                result = content_analyzer.analyze_resource_comprehensive(
+                result = self.content_analyzer.analyze_resource_comprehensive(
                     item['resource_id'], 
                     1  # Default skill_id, would need to determine actual skill
                 )
                 
                 # Mark as completed
-                db_manager.update_analysis_queue_status(item['id'], 'completed')
+                self.db_manager.update_analysis_queue_status(item['id'], 'completed')
                 processed += 1
                 
                 logger.info(f"Analyzed resource {item['resource_id']}: {item['title']}")
                 
             except Exception as e:
                 logger.error(f"Failed to analyze resource {item['resource_id']}: {e}")
-                db_manager.update_analysis_queue_status(item['id'], 'failed', str(e))
+                self.db_manager.update_analysis_queue_status(item['id'], 'failed', str(e))
                 errors.append({
                     'resource_id': item['resource_id'],
                     'title': item['title'],
@@ -291,7 +291,7 @@ class LearningExperienceService:
         return {
             'processed': processed,
             'errors': errors,
-            'remaining_in_queue': len(db_manager.get_analysis_queue('pending'))
+            'remaining_in_queue': len(self.db_manager.get_analysis_queue('pending'))
         }
     
     def _ensure_resources_analyzed(self, resources: List[Dict[str, Any]], skill_id: int) -> List[Dict[str, Any]]:
