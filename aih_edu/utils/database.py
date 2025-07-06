@@ -1088,15 +1088,25 @@ class DatabaseManager:
     def update_resource_categorization(self, resource_id, cost_type, difficulty_level):
         """Update cost_type and difficulty_level for a resource"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    UPDATE educational_resources 
-                    SET cost_type = ?, difficulty_level = ?
-                    WHERE id = ?
-                """, (cost_type, difficulty_level, resource_id))
-                conn.commit()
-                return cursor.rowcount > 0
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            UPDATE educational_resources 
+                            SET cost_type = %s, difficulty_level = %s
+                            WHERE id = %s
+                        """, (cost_type, difficulty_level, resource_id))
+                        conn.commit()
+                        return cursor.rowcount > 0
+                else:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        UPDATE educational_resources 
+                        SET cost_type = ?, difficulty_level = ?
+                        WHERE id = ?
+                    """, (cost_type, difficulty_level, resource_id))
+                    conn.commit()
+                    return cursor.rowcount > 0
         except Exception as e:
             logger.error(f"Error updating resource categorization: {e}")
             return False
@@ -1104,14 +1114,24 @@ class DatabaseManager:
     def get_cost_distribution(self):
         """Get distribution of resources by cost type"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT cost_type, COUNT(*) 
-                    FROM educational_resources 
-                    GROUP BY cost_type
-                """)
-                return dict(cursor.fetchall())
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    conn.cursor_factory = psycopg2.extras.RealDictCursor
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT cost_type, COUNT(*) 
+                            FROM educational_resources 
+                            GROUP BY cost_type
+                        """)
+                        return dict(cursor.fetchall())
+                else:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT cost_type, COUNT(*) 
+                        FROM educational_resources 
+                        GROUP BY cost_type
+                    """)
+                    return dict(cursor.fetchall())
         except Exception as e:
             logger.error(f"Error getting cost distribution: {e}")
             return {}
@@ -1119,14 +1139,24 @@ class DatabaseManager:
     def get_difficulty_distribution(self):
         """Get distribution of resources by difficulty level"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT difficulty_level, COUNT(*) 
-                    FROM educational_resources 
-                    GROUP BY difficulty_level
-                """)
-                return dict(cursor.fetchall())
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    conn.cursor_factory = psycopg2.extras.RealDictCursor
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT difficulty_level, COUNT(*) 
+                            FROM educational_resources 
+                            GROUP BY difficulty_level
+                        """)
+                        return dict(cursor.fetchall())
+                else:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT difficulty_level, COUNT(*) 
+                        FROM educational_resources 
+                        GROUP BY difficulty_level
+                    """)
+                    return dict(cursor.fetchall())
         except Exception as e:
             logger.error(f"Error getting difficulty distribution: {e}")
             return {}
