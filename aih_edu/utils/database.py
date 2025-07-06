@@ -876,35 +876,58 @@ class DatabaseManager:
     
     def get_learning_paths_for_skill(self, skill_id: int) -> List[Dict[str, Any]]:
         """Get all learning paths for a skill"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                SELECT * FROM skill_learning_paths 
-                WHERE skill_id = ?
-                ORDER BY 
-                    CASE path_name 
-                        WHEN 'beginner' THEN 1
-                        WHEN 'intermediate' THEN 2
-                        WHEN 'advanced' THEN 3
-                        WHEN 'expert' THEN 4
-                        ELSE 5
-                    END
-            ''', (skill_id,))
-            
-            rows = cursor.fetchall()
-            paths = []
-            for row in rows:
-                path = dict(row)
-                path['resource_sequence'] = json.loads(path['resource_sequence'])
-                path['prerequisites'] = json.loads(path['prerequisites'] or '[]')
-                path['learning_milestones'] = json.loads(path['learning_milestones'] or '[]')
-                path['completion_projects'] = json.loads(path['completion_projects'] or '[]')
-                path['difficulty_progression'] = json.loads(path['difficulty_progression'] or '{}')
-                paths.append(path)
-            
-            return paths
+        try:
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    conn.cursor_factory = psycopg2.extras.RealDictCursor
+                    with conn.cursor() as cursor:
+                        cursor.execute('''
+                            SELECT * FROM skill_learning_paths 
+                            WHERE skill_id = %s
+                            ORDER BY 
+                                CASE path_name 
+                                    WHEN 'beginner' THEN 1
+                                    WHEN 'intermediate' THEN 2
+                                    WHEN 'advanced' THEN 3
+                                    WHEN 'expert' THEN 4
+                                    ELSE 5
+                                END
+                        ''', (skill_id,))
+                        
+                        rows = cursor.fetchall()
+                else:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    
+                    cursor.execute('''
+                        SELECT * FROM skill_learning_paths 
+                        WHERE skill_id = ?
+                        ORDER BY 
+                            CASE path_name 
+                                WHEN 'beginner' THEN 1
+                                WHEN 'intermediate' THEN 2
+                                WHEN 'advanced' THEN 3
+                                WHEN 'expert' THEN 4
+                                ELSE 5
+                            END
+                    ''', (skill_id,))
+                    
+                    rows = cursor.fetchall()
+                
+                paths = []
+                for row in rows:
+                    path = dict(row)
+                    path['resource_sequence'] = json.loads(path['resource_sequence'])
+                    path['prerequisites'] = json.loads(path['prerequisites'] or '[]')
+                    path['learning_milestones'] = json.loads(path['learning_milestones'] or '[]')
+                    path['completion_projects'] = json.loads(path['completion_projects'] or '[]')
+                    path['difficulty_progression'] = json.loads(path['difficulty_progression'] or '{}')
+                    paths.append(path)
+                
+                return paths
+        except Exception as e:
+            logger.error(f"Error getting learning paths for skill {skill_id}: {e}")
+            return []
     
     def get_enhanced_resources_for_skill(self, skill_id: int, difficulty_filter: Optional[str] = None,
                                         cost_filter: Optional[str] = None) -> List[Dict[str, Any]]:
