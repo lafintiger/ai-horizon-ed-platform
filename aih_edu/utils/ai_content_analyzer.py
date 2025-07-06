@@ -13,7 +13,6 @@ import requests
 from dataclasses import dataclass
 
 from utils.config import config
-from utils.database import db_manager
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -35,7 +34,8 @@ class ContentAnalysisResult:
 class AIContentAnalyzer:
     """AI-powered content analyzer for educational resources"""
     
-    def __init__(self):
+    def __init__(self, database_manager):
+        self.db_manager = database_manager
         self.anthropic_api_key = config.get('ANTHROPIC_API_KEY')
         self.openai_api_key = config.get('OPENAI_API_KEY')
         
@@ -44,7 +44,7 @@ class AIContentAnalyzer:
         logger.info(f"Starting comprehensive analysis for resource {resource_id}")
         
         # Get resource data
-        resource = db_manager.get_resource_by_id(resource_id)
+        resource = self.db_manager.get_resource_by_id(resource_id)
         if not resource:
             raise ValueError(f"Resource {resource_id} not found")
         
@@ -782,4 +782,4 @@ Be encouraging but honest in your feedback. Recognize effort and partial underst
         return None
 
 # Global analyzer instance
-content_analyzer = AIContentAnalyzer() 
+# Note: Global content_analyzer instance removed - create with database_manager from app.py 

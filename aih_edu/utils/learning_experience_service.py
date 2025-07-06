@@ -12,15 +12,15 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 from utils.config import config
-from utils.ai_content_analyzer import content_analyzer
 
 logger = logging.getLogger(__name__)
 
 class LearningExperienceService:
     """Service to manage enhanced learning experiences"""
     
-    def __init__(self, database_manager):
+    def __init__(self, database_manager, ai_content_analyzer=None):
         self.db_manager = database_manager
+        self.content_analyzer = ai_content_analyzer
         self.session_timeout_hours = 24  # Session expires after 24 hours
         
     def get_skill_learning_experience(self, skill_name: str, session_id: Optional[str] = None,

@@ -91,11 +91,17 @@ def add_security_headers(response):
 
 # Initialize database
 db_manager = DatabaseManager()
-content_analyzer = EnhancedContentAnalyzer()
+
+# Initialize content analyzer with database manager
+from utils.ai_content_analyzer import AIContentAnalyzer
+content_analyzer = AIContentAnalyzer(db_manager)
+
+# Also initialize enhanced content analyzer
+enhanced_content_analyzer = EnhancedContentAnalyzer()
 
 # Initialize learning experience service with database manager
 from utils.learning_experience_service import LearningExperienceService
-learning_service = LearningExperienceService(db_manager)
+learning_service = LearningExperienceService(db_manager, content_analyzer)
 
 # DIAGNOSTIC: Check what methods are available on db_manager
 available_methods = [method for method in dir(db_manager) if not method.startswith('_')]
@@ -2015,7 +2021,6 @@ def api_grade_quiz_ai(resource_id):
             return jsonify({'error': 'Resource not found'}), 404
         
         # Use AI to grade the answers
-        from utils.ai_content_analyzer import content_analyzer
         grading_results = content_analyzer.grade_quiz_answers(
             resource, questions, answers
         )
