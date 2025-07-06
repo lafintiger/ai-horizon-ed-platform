@@ -1392,45 +1392,50 @@ def skill_detail(skill_name):
 
 def normalize_skill_name_from_url(url_skill_name: str) -> str:
     """Convert URL skill name to match database skill names"""
-    # Get all skills from database to find best match
-    skills = db_manager.get_emerging_skills()
-    
-    # Create normalized URL name (replace dashes with spaces, lowercase)
-    url_normalized = url_skill_name.lower().replace('-', ' ').strip()
-    
-    # Try exact match first (after normalization)
-    for skill in skills:
-        skill_normalized = skill['skill_name'].lower().strip()
-        if skill_normalized == url_normalized:
-            return skill['skill_name']
-    
-    # Try partial matching for common variations
-    for skill in skills:
-        skill_normalized = skill['skill_name'].lower().strip()
+    try:
+        # Get all skills from database to find best match
+        skills = db_manager.get_emerging_skills()
         
-        # Normalize both for comparison (handle common variations)
-        skill_clean = skill_normalized.replace('-', ' ').replace('&', 'and').strip()
-        url_clean = url_normalized.replace('-', ' ').replace('&', 'and').strip()
+        # Create normalized URL name (replace dashes with spaces, lowercase)
+        url_normalized = url_skill_name.lower().replace('-', ' ').strip()
         
-        # Direct match
-        if skill_clean == url_clean:
-            return skill['skill_name']
-        
-        # Check if they're equivalent (handle extra spaces, punctuation)
-        skill_words = skill_clean.split()
-        url_words = url_clean.split()
-        
-        # If all words match (in order), it's a match
-        if len(skill_words) == len(url_words):
-            if all(s == u for s, u in zip(skill_words, url_words)):
+        # Try exact match first (after normalization)
+        for skill in skills:
+            skill_normalized = skill['skill_name'].lower().strip()
+            if skill_normalized == url_normalized:
                 return skill['skill_name']
         
-        # Partial match - if URL words are a subset of skill words
-        if all(word in skill_words for word in url_words):
-            return skill['skill_name']
+        # Try partial matching for common variations
+        for skill in skills:
+            skill_normalized = skill['skill_name'].lower().strip()
+            
+            # Normalize both for comparison (handle common variations)
+            skill_clean = skill_normalized.replace('-', ' ').replace('&', 'and').strip()
+            url_clean = url_normalized.replace('-', ' ').replace('&', 'and').strip()
+            
+            # Direct match
+            if skill_clean == url_clean:
+                return skill['skill_name']
+            
+            # Check if they're equivalent (handle extra spaces, punctuation)
+            skill_words = skill_clean.split()
+            url_words = url_clean.split()
+            
+            # If all words match (in order), it's a match
+            if len(skill_words) == len(url_words):
+                if all(s == u for s, u in zip(skill_words, url_words)):
+                    return skill['skill_name']
+            
+            # Partial match - if URL words are a subset of skill words
+            if all(word in skill_words for word in url_words):
+                return skill['skill_name']
+        
+        # If no match found, raise ValueError to trigger 404
+        raise ValueError(f"Skill '{url_skill_name}' not found in database")
     
-    # If no match found, raise ValueError to trigger 404
-    raise ValueError(f"Skill '{url_skill_name}' not found in database")
+    except Exception as e:
+        logger.error(f"ERROR in normalize_skill_name_from_url: {e}")
+        raise
 
 # =============================================================================
 # ENHANCED LEARNING EXPERIENCE API ENDPOINTS
@@ -2020,21 +2025,118 @@ def api_grade_quiz_ai(resource_id):
         if not resource:
             return jsonify({'error': 'Resource not found'}), 404
         
-        # Use AI to grade the answers
-        grading_results = content_analyzer.grade_quiz_answers(
-            resource, questions, answers
-        )
+        # Try AI grading with timeout handling
+        grading_results = None
+        ai_graded = False
         
-        if grading_results:
-            return jsonify({
-                'success': True,
-                'resource_id': resource_id,
-                'grading_results': grading_results,
-                'ai_graded': True
+        try:
+            # Use AI to grade the answers (with a reasonable timeout built into the analyzer)
+            grading_results = content_analyzer.grade_quiz_answers(
+                resource, questions, answers
+            )
+            
+            if grading_results:
+                ai_graded = True
+                return jsonify({
+                    'success': True,
+                    'resource_id': resource_id,
+                    'grading_results': grading_results,
+                    'ai_graded': True
+                })
+        except Exception as ai_error:
+            logger.warning(f"AI grading failed for resource {resource_id}: {ai_error}")
+            # Continue to fallback grading
+        
+        # Fallback to basic grading if AI fails or times out
+        logger.info(f"Using fallback grading for resource {resource_id}")
+        
+        # Create a basic grading response
+        total_questions = len(questions)
+        basic_score = 0
+        question_results = []
+        
+        for i, (question, answer) in enumerate(zip(questions, answers)):
+            # Handle different question formats
+            if isinstance(question, dict):
+                question_text = question.get('question_text', question.get('question', ''))
+                correct_answer = question.get('correct_answer', '')
+                explanation = question.get('explanation', 'No explanation provided')
+                question_type = question.get('question_type', question.get('type', 'unknown'))
+                options = question.get('options', [])
+            else:
+                question_text = str(question)
+                correct_answer = ''
+                explanation = 'No explanation provided'
+                question_type = 'unknown'
+                options = []
+            
+            # Basic scoring logic
+            question_score = 0
+            if question_type == 'multiple_choice' and isinstance(answer, int) and options:
+                if 0 <= answer < len(options) and options[answer] == correct_answer:
+                    question_score = 100
+                elif correct_answer and options[answer].lower().strip() == correct_answer.lower().strip():
+                    question_score = 100
+                else:
+                    question_score = 0
+            elif question_type == 'open_ended' and isinstance(answer, str):
+                # For open-ended questions, give credit based on length and keywords
+                if len(answer.strip()) > 10:
+                    question_score = 75  # Partial credit for attempting an answer
+                    # Check for key terms from correct answer
+                    if correct_answer and any(word.lower() in answer.lower() for word in correct_answer.split() if len(word) > 3):
+                        question_score = 85
+                else:
+                    question_score = 20  # Minimal credit for very short answers
+            else:
+                # Fallback comparison
+                if correct_answer and str(answer).lower().strip() == correct_answer.lower().strip():
+                    question_score = 100
+                elif len(str(answer).strip()) > 0:
+                    question_score = 50  # Partial credit for any answer
+                else:
+                    question_score = 0
+            
+            basic_score += question_score
+            
+            question_results.append({
+                "question_number": i + 1,
+                "student_answer": str(answer),
+                "correct_answer": correct_answer,
+                "score": question_score,
+                "max_score": 100,
+                "feedback": f"Basic grading: {'Correct!' if question_score >= 90 else 'Partially correct' if question_score >= 50 else 'Needs improvement'}",
+                "strengths": ["Answer provided"] if question_score > 0 else [],
+                "improvements": ["Review the concepts and try again"] if question_score < 70 else [],
+                "partial_credit_given": question_score > 0 and question_score < 100
             })
-        else:
-            # Fallback to basic grading
-            return api_submit_quiz(resource_id)
+        
+        overall_score = int(basic_score / total_questions) if total_questions > 0 else 0
+        passing_grade = overall_score >= 70
+        
+        fallback_results = {
+            "overall_score": overall_score,
+            "total_questions": total_questions,
+            "questions_evaluated": question_results,
+            "overall_feedback": f"Basic grading complete. Score: {overall_score}%. " + 
+                               ("Well done!" if passing_grade else "Keep studying and try again."),
+            "study_recommendations": [
+                "Review the resource material",
+                "Practice with additional examples",
+                "Focus on understanding key concepts"
+            ],
+            "passing_grade": passing_grade,
+            "grade_letter": "A" if overall_score >= 90 else "B" if overall_score >= 80 else "C" if overall_score >= 70 else "D" if overall_score >= 60 else "F"
+        }
+        
+        return jsonify({
+            'success': True,
+            'resource_id': resource_id,
+            'grading_results': fallback_results,
+            'ai_graded': False,
+            'fallback_used': True,
+            'message': 'Quiz graded using fallback system (AI grading temporarily unavailable)'
+        })
         
     except Exception as e:
         logger.error(f"Error grading quiz for resource {resource_id}: {e}")

@@ -301,18 +301,18 @@ class LearningExperienceService:
         for resource in resources:
             if not resource.get('ai_analysis_date'):
                 # Queue for analysis
-                db_manager.queue_content_analysis(resource['id'], 'full', 1)
+                self.db_manager.queue_content_analysis(resource['id'], 'full', 1)
                 logger.info(f"Queued resource {resource['id']} for analysis")
             
             # Add learning content to resource
-            resource['learning_content'] = db_manager.get_learning_content(resource['id'])
+            resource['learning_content'] = self.db_manager.get_learning_content(resource['id'])
             analyzed_resources.append(resource)
         
         return analyzed_resources
     
     def _get_or_create_learning_paths(self, skill_id: int, resources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Get existing learning paths or create them if they don't exist"""
-        existing_paths = db_manager.get_learning_paths_for_skill(skill_id)
+        existing_paths = self.db_manager.get_learning_paths_for_skill(skill_id)
         
         if existing_paths:
             return existing_paths
@@ -355,7 +355,7 @@ class LearningExperienceService:
                         ]
                     }
                     
-                    path_id = db_manager.create_learning_path(
+                    path_id = self.db_manager.create_learning_path(
                         skill_id, difficulty, resource_sequence, path_data
                     )
                     

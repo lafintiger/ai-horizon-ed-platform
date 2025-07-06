@@ -1374,9 +1374,9 @@ class DatabaseManager:
                             
                             # Handle both formats: direct list or dict with 'questions' key
                             if isinstance(content_data, list):
-                                return content_data
+                                questions = content_data
                             elif isinstance(content_data, dict):
-                                return content_data.get('questions', [])
+                                questions = content_data.get('questions', [])
                             else:
                                 return []
                         else:
@@ -1398,13 +1398,47 @@ class DatabaseManager:
                         
                         # Handle both formats: direct list or dict with 'questions' key
                         if isinstance(content_data, list):
-                            return content_data
+                            questions = content_data
                         elif isinstance(content_data, dict):
-                            return content_data.get('questions', [])
+                            questions = content_data.get('questions', [])
                         else:
                             return []
                     else:
                         return []
+                
+                # Normalize questions to ensure they're all dictionaries
+                normalized_questions = []
+                for i, question in enumerate(questions):
+                    if isinstance(question, dict):
+                        # Ensure required fields exist
+                        normalized_question = {
+                            'id': question.get('id', i + 1),
+                            'question_text': question.get('question_text', question.get('question', '')),
+                            'question_type': question.get('question_type', question.get('type', 'open_ended')),
+                            'options': question.get('options', []),
+                            'correct_answer': question.get('correct_answer', ''),
+                            'explanation': question.get('explanation', 'No explanation provided'),
+                            'difficulty': question.get('difficulty', 'medium')
+                        }
+                        normalized_questions.append(normalized_question)
+                    elif isinstance(question, str):
+                        # Convert string question to dictionary format
+                        normalized_question = {
+                            'id': i + 1,
+                            'question_text': question,
+                            'question_type': 'open_ended',
+                            'options': [],
+                            'correct_answer': '',
+                            'explanation': 'No explanation provided',
+                            'difficulty': 'medium'
+                        }
+                        normalized_questions.append(normalized_question)
+                    else:
+                        # Skip invalid question formats
+                        logger.warning(f"Invalid question format for resource {resource_id}: {type(question)}")
+                        continue
+                
+                return normalized_questions
                         
         except Exception as e:
             logger.error(f"Error getting questions for resource {resource_id}: {e}")

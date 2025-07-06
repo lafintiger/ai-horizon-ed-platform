@@ -559,23 +559,23 @@ Best suited for learners who want to develop practical skills in {resource['skil
             'content_extracted': result.content_extracted
         }
         
-        db_manager.update_resource_analysis(resource_id, analysis_data)
+        self.db_manager.update_resource_analysis(resource_id, analysis_data)
         
         # Store learning content
         if result.comprehension_questions:
-            db_manager.add_learning_content(
+            self.db_manager.add_learning_content(
                 resource_id, skill_id, 'questions',
                 {'questions': result.comprehension_questions}
             )
         
         if result.suggested_projects:
-            db_manager.add_learning_content(
+            self.db_manager.add_learning_content(
                 resource_id, skill_id, 'projects',
                 {'projects': result.suggested_projects}
             )
         
         if result.learning_summary:
-            db_manager.add_learning_content(
+            self.db_manager.add_learning_content(
                 resource_id, skill_id, 'summary',
                 {'summary': result.learning_summary}
             )
@@ -649,13 +649,33 @@ QUESTIONS AND ANSWERS TO EVALUATE:
 """
         
         for i, (question, answer) in enumerate(zip(questions, answers)):
-            question_text = question.get('question_text', question.get('question', ''))
-            correct_answer = question.get('correct_answer', '')
-            explanation = question.get('explanation', 'No explanation provided')
+            # Handle different question formats
+            if isinstance(question, dict):
+                question_text = question.get('question_text', question.get('question', ''))
+                correct_answer = question.get('correct_answer', '')
+                explanation = question.get('explanation', 'No explanation provided')
+                question_type = question.get('question_type', question.get('type', 'unknown'))
+                options = question.get('options', [])
+            else:
+                question_text = str(question)
+                correct_answer = ''
+                explanation = 'No explanation provided'
+                question_type = 'unknown'
+                options = []
+            
+            # Format the answer based on question type and answer type
+            formatted_answer = str(answer)
+            
+            # If it's a multiple choice question and answer is an integer, convert to option text
+            if question_type == 'multiple_choice' and isinstance(answer, int) and options:
+                if 0 <= answer < len(options):
+                    formatted_answer = options[answer]
+                else:
+                    formatted_answer = f"Option {answer} (invalid)"
             
             prompt += f"""
 Question {i+1}: {question_text}
-Student Answer: {answer}
+Student Answer: {formatted_answer}
 Correct Answer: {correct_answer}
 Explanation: {explanation}
 
