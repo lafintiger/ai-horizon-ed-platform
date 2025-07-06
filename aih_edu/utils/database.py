@@ -329,56 +329,110 @@ class DatabaseManager:
                         min_quality: float = 0.0,
                         limit: int = 50) -> List[Dict[str, Any]]:
         """Search for educational resources"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            # Build query
-            where_conditions = ["quality_score >= ?"]
-            params = [min_quality]
-            
-            if query:
-                where_conditions.append("(title LIKE ? OR description LIKE ? OR keywords LIKE ?)")
-                query_param = f"%{query}%"
-                params.extend([query_param, query_param, query_param])
-            
-            if skill_category:
-                where_conditions.append("skill_category = ?")
-                params.append(skill_category)
-            
-            if learning_level:
-                where_conditions.append("learning_level = ?")
-                params.append(learning_level)
-            
-            if resource_type:
-                where_conditions.append("resource_type = ?")
-                params.append(resource_type)
-            
-            where_clause = " AND ".join(where_conditions)
-            
-            sql = f'''
-                SELECT * FROM educational_resources 
-                WHERE {where_clause}
-                ORDER BY quality_score DESC, popularity_score DESC, created_at DESC
-                LIMIT ?
-            '''
-            params.append(limit)
-            
-            cursor.execute(sql, params)
-            rows = cursor.fetchall()
-            
-            # Convert to list of dictionaries
-            resources = []
-            for row in rows:
-                resource = dict(row)
-                # Parse JSON fields
-                resource['metadata'] = json.loads(resource['metadata'] or '{}')
-                resource['prerequisites'] = json.loads(resource['prerequisites'] or '[]')
-                resource['learning_outcomes'] = json.loads(resource['learning_outcomes'] or '[]')
-                resource['keywords'] = [k.strip() for k in (resource['keywords'] or '').split(',') if k.strip()]
-                resources.append(resource)
-            
-            return resources
+        try:
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    conn.cursor_factory = psycopg2.extras.RealDictCursor
+                    with conn.cursor() as cursor:
+                        # Build query
+                        where_conditions = ["quality_score >= %s"]
+                        params = [min_quality]
+                        
+                        if query:
+                            where_conditions.append("(title ILIKE %s OR description ILIKE %s OR keywords ILIKE %s)")
+                            query_param = f"%{query}%"
+                            params.extend([query_param, query_param, query_param])
+                        
+                        if skill_category:
+                            where_conditions.append("skill_category = %s")
+                            params.append(skill_category)
+                        
+                        if learning_level:
+                            where_conditions.append("learning_level = %s")
+                            params.append(learning_level)
+                        
+                        if resource_type:
+                            where_conditions.append("resource_type = %s")
+                            params.append(resource_type)
+                        
+                        where_clause = " AND ".join(where_conditions)
+                        
+                        sql = f'''
+                            SELECT * FROM educational_resources 
+                            WHERE {where_clause}
+                            ORDER BY quality_score DESC, popularity_score DESC, created_at DESC
+                            LIMIT %s
+                        '''
+                        params.append(limit)
+                        
+                        cursor.execute(sql, params)
+                        rows = cursor.fetchall()
+                        
+                        # Convert to list of dictionaries
+                        resources = []
+                        for row in rows:
+                            resource = dict(row)
+                            # Parse JSON fields
+                            resource['metadata'] = json.loads(resource['metadata'] or '{}')
+                            resource['prerequisites'] = json.loads(resource['prerequisites'] or '[]')
+                            resource['learning_outcomes'] = json.loads(resource['learning_outcomes'] or '[]')
+                            resource['keywords'] = [k.strip() for k in (resource['keywords'] or '').split(',') if k.strip()]
+                            resources.append(resource)
+                        
+                        return resources
+                else:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    
+                    # Build query
+                    where_conditions = ["quality_score >= ?"]
+                    params = [min_quality]
+                    
+                    if query:
+                        where_conditions.append("(title LIKE ? OR description LIKE ? OR keywords LIKE ?)")
+                        query_param = f"%{query}%"
+                        params.extend([query_param, query_param, query_param])
+                    
+                    if skill_category:
+                        where_conditions.append("skill_category = ?")
+                        params.append(skill_category)
+                    
+                    if learning_level:
+                        where_conditions.append("learning_level = ?")
+                        params.append(learning_level)
+                    
+                    if resource_type:
+                        where_conditions.append("resource_type = ?")
+                        params.append(resource_type)
+                    
+                    where_clause = " AND ".join(where_conditions)
+                    
+                    sql = f'''
+                        SELECT * FROM educational_resources 
+                        WHERE {where_clause}
+                        ORDER BY quality_score DESC, popularity_score DESC, created_at DESC
+                        LIMIT ?
+                    '''
+                    params.append(limit)
+                    
+                    cursor.execute(sql, params)
+                    rows = cursor.fetchall()
+                    
+                    # Convert to list of dictionaries
+                    resources = []
+                    for row in rows:
+                        resource = dict(row)
+                        # Parse JSON fields
+                        resource['metadata'] = json.loads(resource['metadata'] or '{}')
+                        resource['prerequisites'] = json.loads(resource['prerequisites'] or '[]')
+                        resource['learning_outcomes'] = json.loads(resource['learning_outcomes'] or '[]')
+                        resource['keywords'] = [k.strip() for k in (resource['keywords'] or '').split(',') if k.strip()]
+                        resources.append(resource)
+                    
+                    return resources
+        except Exception as e:
+            logger.error(f"Error searching resources: {e}")
+            return []
     
     def get_resource_by_id(self, resource_id: int) -> Optional[Dict[str, Any]]:
         """Get a specific resource by ID"""
