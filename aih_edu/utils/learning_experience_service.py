@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 from utils.config import config
-from utils.database import db_manager
 from utils.ai_content_analyzer import content_analyzer
 
 logger = logging.getLogger(__name__)
@@ -20,7 +19,8 @@ logger = logging.getLogger(__name__)
 class LearningExperienceService:
     """Service to manage enhanced learning experiences"""
     
-    def __init__(self):
+    def __init__(self, database_manager):
+        self.db_manager = database_manager
         self.session_timeout_hours = 24  # Session expires after 24 hours
         
     def get_skill_learning_experience(self, skill_name: str, session_id: Optional[str] = None,
@@ -30,7 +30,7 @@ class LearningExperienceService:
         logger.info(f"Generating learning experience for skill: {skill_name}")
         
         # Get skill data
-        skills = db_manager.get_emerging_skills()
+        skills = self.db_manager.get_emerging_skills()
         logger.info(f"Found {len(skills)} skills in database")
         logger.info(f"Looking for skill: '{skill_name}' (normalized)")
         
@@ -47,10 +47,10 @@ class LearningExperienceService:
         if not session_id:
             session_id = self.create_learning_session(skill_id)
         
-        session_data = db_manager.get_learning_session(session_id)
+        session_data = self.db_manager.get_learning_session(session_id)
         
         # Get enhanced resources with filtering
-        resources = db_manager.get_enhanced_resources_for_skill(
+        resources = self.db_manager.get_enhanced_resources_for_skill(
             skill_id, difficulty_filter, cost_filter
         )
         
@@ -572,5 +572,4 @@ class LearningExperienceService:
                 pass
         return 0
 
-# Global service instance
-learning_service = LearningExperienceService() 
+# Note: Global service instance removed - create with database_manager from app.py 

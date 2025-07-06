@@ -93,6 +93,10 @@ def add_security_headers(response):
 db_manager = DatabaseManager()
 content_analyzer = EnhancedContentAnalyzer()
 
+# Initialize learning experience service with database manager
+from utils.learning_experience_service import LearningExperienceService
+learning_service = LearningExperienceService(db_manager)
+
 # DIAGNOSTIC: Check what methods are available on db_manager
 available_methods = [method for method in dir(db_manager) if not method.startswith('_')]
 logger.info(f"DatabaseManager available methods: {available_methods}")
@@ -1340,8 +1344,6 @@ def skill_detail(skill_name):
     """Enhanced skill page with comprehensive learning experience"""
     logger.info(f"Skill detail requested for: '{skill_name}'")
     try:
-        from utils.learning_experience_service import learning_service
-        
         # Get session ID from query params or create new one
         session_id = request.args.get('session_id')
         difficulty_filter = request.args.get('difficulty')
@@ -1432,8 +1434,6 @@ def normalize_skill_name_from_url(url_skill_name: str) -> str:
 def api_update_learning_progress():
     """Update learning progress for a session"""
     try:
-        from utils.learning_experience_service import learning_service
-        
         data = request.get_json()
         session_id = data.get('session_id')
         
@@ -1462,8 +1462,6 @@ def api_update_learning_progress():
 def api_answer_question():
     """Process a comprehension question answer"""
     try:
-        from utils.learning_experience_service import learning_service
-        
         data = request.get_json()
         session_id = data.get('session_id')
         resource_id = data.get('resource_id')
@@ -1490,8 +1488,6 @@ def api_answer_question():
 def api_complete_project():
     """Mark a project as completed"""
     try:
-        from utils.learning_experience_service import learning_service
-        
         data = request.get_json()
         session_id = data.get('session_id')
         resource_id = data.get('resource_id')
@@ -1518,8 +1514,6 @@ def api_complete_project():
 def api_get_resource_content(resource_id):
     """Get enhanced learning content for a resource"""
     try:
-        from utils.learning_experience_service import learning_service
-        
         content_type = request.args.get('type')  # 'questions', 'projects', 'summary', etc.
         
         content = learning_service.get_resource_learning_content(resource_id, content_type)
@@ -1538,8 +1532,6 @@ def api_get_resource_content(resource_id):
 def api_analyze_skill():
     """Queue a skill for comprehensive AI analysis"""
     try:
-        from utils.learning_experience_service import learning_service
-        
         data = request.get_json()
         skill_name = data.get('skill_name')
         priority = data.get('priority', 1)
@@ -1563,8 +1555,6 @@ def api_analyze_skill():
 def api_process_analysis_queue():
     """Process queued analysis tasks"""
     try:
-        from utils.learning_experience_service import learning_service
-        
         data = request.get_json()
         batch_size = data.get('batch_size', 5)
         

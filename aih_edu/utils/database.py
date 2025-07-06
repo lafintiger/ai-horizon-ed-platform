@@ -1625,5 +1625,4 @@ class DatabaseManager:
             logger.error(f"Error storing quiz attempt for resource {resource_id}: {e}")
             return False
 
-# Global database instance
-db_manager = DatabaseManager() 
+# Note: Global database instance removed - use the instance from app.py instead 
