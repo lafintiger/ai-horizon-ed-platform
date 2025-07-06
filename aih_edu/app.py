@@ -636,6 +636,22 @@ def api_database_stats():
         logger.error(f"Error getting database stats: {e}")
         return jsonify({"error": "Failed to get database statistics"}), 500
 
+@app.route('/api/resources')
+def api_resources():
+    """Get all resources - basic endpoint for frontend"""
+    try:
+        resources = db_manager.get_all_resources()
+        
+        return jsonify({
+            "resources": resources,
+            "total_count": len(resources),
+            "status": "success"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting resources: {e}")
+        return jsonify({"error": "Failed to get resources"}), 500
+
 @app.route('/api/database/skill-resources/<int:skill_id>')
 def api_skill_resources(skill_id):
     """Get all resources for a specific skill"""
