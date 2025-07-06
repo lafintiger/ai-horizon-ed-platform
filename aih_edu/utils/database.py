@@ -788,32 +788,56 @@ class DatabaseManager:
     
     def get_learning_content(self, resource_id: int, content_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get learning content for a resource"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            if content_type:
-                cursor.execute('''
-                    SELECT * FROM learning_content 
-                    WHERE resource_id = ? AND content_type = ?
-                    ORDER BY ai_generated_date DESC
-                ''', (resource_id, content_type))
-            else:
-                cursor.execute('''
-                    SELECT * FROM learning_content 
-                    WHERE resource_id = ?
-                    ORDER BY content_type, ai_generated_date DESC
-                ''', (resource_id,))
-            
-            rows = cursor.fetchall()
-            content_list = []
-            for row in rows:
-                content = dict(row)
-                content['content_data'] = json.loads(content['content_data'])
-                content['admin_modified'] = json.loads(content['admin_modified'] or '{}')
-                content_list.append(content)
-            
-            return content_list
+        try:
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    conn.cursor_factory = psycopg2.extras.RealDictCursor
+                    with conn.cursor() as cursor:
+                        if content_type:
+                            cursor.execute('''
+                                SELECT * FROM learning_content 
+                                WHERE resource_id = %s AND content_type = %s
+                                ORDER BY created_date DESC
+                            ''', (resource_id, content_type))
+                        else:
+                            cursor.execute('''
+                                SELECT * FROM learning_content 
+                                WHERE resource_id = %s
+                                ORDER BY content_type, created_date DESC
+                            ''', (resource_id,))
+                        
+                        rows = cursor.fetchall()
+                else:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    
+                    if content_type:
+                        cursor.execute('''
+                            SELECT * FROM learning_content 
+                            WHERE resource_id = ? AND content_type = ?
+                            ORDER BY ai_generated_date DESC
+                        ''', (resource_id, content_type))
+                    else:
+                        cursor.execute('''
+                            SELECT * FROM learning_content 
+                            WHERE resource_id = ?
+                            ORDER BY content_type, ai_generated_date DESC
+                        ''', (resource_id,))
+                    
+                    rows = cursor.fetchall()
+                
+                content_list = []
+                for row in rows:
+                    content = dict(row)
+                    content['content_data'] = json.loads(content['content_data'])
+                    if 'admin_modified' in content:
+                        content['admin_modified'] = json.loads(content['admin_modified'] or '{}')
+                    content_list.append(content)
+                
+                return content_list
+        except Exception as e:
+            logger.error(f"Error getting learning content for resource {resource_id}: {e}")
+            return []
     
     def create_learning_path(self, skill_id: int, path_name: str, resource_sequence: List[int],
                             path_data: Dict[str, Any]) -> int:
@@ -885,59 +909,100 @@ class DatabaseManager:
     def get_enhanced_resources_for_skill(self, skill_id: int, difficulty_filter: Optional[str] = None,
                                         cost_filter: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get enhanced resources for a skill with filtering options"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            # Build dynamic query with filters
-            where_conditions = ["srm.skill_id = ?"]
-            params = [skill_id]
-            
-            if difficulty_filter:
-                where_conditions.append("er.difficulty_level = ?")
-                params.append(difficulty_filter)
-            
-            if cost_filter:
-                where_conditions.append("er.cost_type = ?")
-                params.append(cost_filter)
-            
-            where_clause = " AND ".join(where_conditions)
-            
-            cursor.execute(f'''
-                SELECT er.*, srm.relevance_score, srm.resource_type_for_skill
-                FROM educational_resources er
-                JOIN skill_resource_mapping srm ON er.id = srm.resource_id
-                WHERE {where_clause}
-                ORDER BY 
-                    er.sequence_order ASC,
-                    CASE er.difficulty_level 
-                        WHEN 'beginner' THEN 1
-                        WHEN 'intermediate' THEN 2
-                        WHEN 'advanced' THEN 3
-                        WHEN 'expert' THEN 4
-                        ELSE 5
-                    END,
-                    er.quality_score DESC
-            ''', params)
-            
-            rows = cursor.fetchall()
-            resources = []
-            for row in rows:
-                resource = dict(row)
-                # Parse JSON fields
-                resource['metadata'] = json.loads(resource['metadata'] or '{}')
-                resource['prerequisites'] = json.loads(resource['prerequisites'] or '[]')
-                resource['learning_outcomes'] = json.loads(resource['learning_outcomes'] or '[]')
-                resource['learning_objectives'] = json.loads(resource['learning_objectives'] or '[]')
-                resource['content_extracted'] = json.loads(resource['content_extracted'] or '{}')
-                resource['keywords'] = [k.strip() for k in (resource['keywords'] or '').split(',') if k.strip()]
+        try:
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    conn.cursor_factory = psycopg2.extras.RealDictCursor
+                    with conn.cursor() as cursor:
+                        # Build dynamic query with filters
+                        where_conditions = ["srm.skill_id = %s"]
+                        params = [skill_id]
+                        
+                        if difficulty_filter:
+                            where_conditions.append("er.difficulty_level = %s")
+                            params.append(difficulty_filter)
+                        
+                        if cost_filter:
+                            where_conditions.append("er.cost_type = %s")
+                            params.append(cost_filter)
+                        
+                        where_clause = " AND ".join(where_conditions)
+                        
+                        cursor.execute(f'''
+                            SELECT er.*, srm.relevance_score, srm.resource_type_for_skill
+                            FROM educational_resources er
+                            JOIN skill_resource_mapping srm ON er.id = srm.resource_id
+                            WHERE {where_clause}
+                            ORDER BY 
+                                er.sequence_order ASC,
+                                CASE er.difficulty_level 
+                                    WHEN 'beginner' THEN 1
+                                    WHEN 'intermediate' THEN 2
+                                    WHEN 'advanced' THEN 3
+                                    WHEN 'expert' THEN 4
+                                    ELSE 5
+                                END,
+                                er.quality_score DESC
+                        ''', params)
+                        
+                        rows = cursor.fetchall()
+                else:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    
+                    # Build dynamic query with filters
+                    where_conditions = ["srm.skill_id = ?"]
+                    params = [skill_id]
+                    
+                    if difficulty_filter:
+                        where_conditions.append("er.difficulty_level = ?")
+                        params.append(difficulty_filter)
+                    
+                    if cost_filter:
+                        where_conditions.append("er.cost_type = ?")
+                        params.append(cost_filter)
+                    
+                    where_clause = " AND ".join(where_conditions)
+                    
+                    cursor.execute(f'''
+                        SELECT er.*, srm.relevance_score, srm.resource_type_for_skill
+                        FROM educational_resources er
+                        JOIN skill_resource_mapping srm ON er.id = srm.resource_id
+                        WHERE {where_clause}
+                        ORDER BY 
+                            er.sequence_order ASC,
+                            CASE er.difficulty_level 
+                                WHEN 'beginner' THEN 1
+                                WHEN 'intermediate' THEN 2
+                                WHEN 'advanced' THEN 3
+                                WHEN 'expert' THEN 4
+                                ELSE 5
+                            END,
+                            er.quality_score DESC
+                    ''', params)
+                    
+                    rows = cursor.fetchall()
                 
-                # Get associated learning content
-                resource['learning_content'] = self.get_learning_content(resource['id'])
+                resources = []
+                for row in rows:
+                    resource = dict(row)
+                    # Parse JSON fields
+                    resource['metadata'] = json.loads(resource['metadata'] or '{}')
+                    resource['prerequisites'] = json.loads(resource['prerequisites'] or '[]')
+                    resource['learning_outcomes'] = json.loads(resource['learning_outcomes'] or '[]')
+                    resource['learning_objectives'] = json.loads(resource['learning_objectives'] or '[]')
+                    resource['content_extracted'] = json.loads(resource['content_extracted'] or '{}')
+                    resource['keywords'] = [k.strip() for k in (resource['keywords'] or '').split(',') if k.strip()]
+                    
+                    # Get associated learning content
+                    resource['learning_content'] = self.get_learning_content(resource['id'])
+                    
+                    resources.append(resource)
                 
-                resources.append(resource)
-            
-            return resources
+                return resources
+        except Exception as e:
+            logger.error(f"Error getting enhanced resources for skill {skill_id}: {e}")
+            return []
     
     def queue_content_analysis(self, resource_id: int, analysis_type: str = 'full', priority: int = 1) -> None:
         """Queue a resource for AI content analysis"""
