@@ -339,12 +339,21 @@ class LearningExperienceService:
                 )
                 
                 if resource_sequence:
+                    # Safely calculate total estimated duration
+                    total_duration = 0
+                    for rid in resource_sequence:
+                        duration = next((r.get('estimated_duration', 60) for r in resources if r['id'] == rid), 60)
+                        try:
+                            # Convert to int if it's a string
+                            duration = int(duration) if duration is not None else 60
+                        except (ValueError, TypeError):
+                            # If conversion fails, use default
+                            duration = 60
+                        total_duration += duration
+                    
                     path_data = {
                         'path_description': f"{difficulty.title()} level learning path",
-                        'estimated_duration': sum(
-                            next((r.get('estimated_duration', 60) for r in resources if r['id'] == rid), 60)
-                            for rid in resource_sequence
-                        ),
+                        'estimated_duration': total_duration,
                         'prerequisites': [f"Basic understanding of cybersecurity concepts"] if difficulty != 'beginner' else [],
                         'learning_milestones': [
                             f"Complete {len(resource_sequence)} resources",
@@ -372,7 +381,18 @@ class LearningExperienceService:
                                 session_data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Calculate learning statistics"""
         total_resources = len(resources)
-        total_duration = sum(r.get('estimated_duration', 60) for r in resources)
+        
+        # Safely calculate total duration by converting to int
+        total_duration = 0
+        for r in resources:
+            duration = r.get('estimated_duration', 60)
+            try:
+                # Convert to int if it's a string
+                duration = int(duration) if duration is not None else 60
+            except (ValueError, TypeError):
+                # If conversion fails, use default
+                duration = 60
+            total_duration += duration
         
         # Count by difficulty
         difficulty_counts = defaultdict(int)

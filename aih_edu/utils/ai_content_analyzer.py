@@ -583,12 +583,97 @@ Best suited for learners who want to develop practical skills in {resource['skil
     def grade_quiz_answers(self, resource: Dict[str, Any], questions: List[Dict[str, Any]], 
                           answers: List[str]) -> Optional[Dict[str, Any]]:
         """Grade quiz answers using AI for intelligent evaluation"""
-        if len(answers) != len(questions):
-            logger.error(f"Answer count ({len(answers)}) doesn't match question count ({len(questions)})")
+        
+        # Validate inputs with better error handling
+        if not questions or not answers:
+            logger.error("Questions or answers are empty")
             return None
         
-        # Build grading prompt
-        grading_prompt = self._build_grading_prompt(resource, questions, answers)
+        # Ensure questions is a list and contains valid data
+        if not isinstance(questions, list):
+            logger.error(f"Questions is not a list: {type(questions)}")
+            return None
+            
+        # Validate each question and normalize if needed
+        normalized_questions = []
+        for i, question in enumerate(questions):
+            if isinstance(question, dict):
+                # Question is already a dictionary - just ensure required fields
+                normalized_question = {
+                    'id': question.get('id', i + 1),
+                    'question_text': question.get('question_text', question.get('question', f'Question {i+1}')),
+                    'question_type': question.get('question_type', question.get('type', 'open_ended')),
+                    'options': question.get('options', []),
+                    'correct_answer': question.get('correct_answer', ''),
+                    'explanation': question.get('explanation', 'No explanation provided'),
+                    'difficulty': question.get('difficulty', 'medium')
+                }
+                normalized_questions.append(normalized_question)
+            elif isinstance(question, str):
+                # Convert string to dictionary format
+                normalized_question = {
+                    'id': i + 1,
+                    'question_text': question,
+                    'question_type': 'open_ended',
+                    'options': [],
+                    'correct_answer': '',
+                    'explanation': 'No explanation provided',
+                    'difficulty': 'medium'
+                }
+                normalized_questions.append(normalized_question)
+            elif isinstance(question, list):
+                # Handle case where question is a list (this was causing the error)
+                logger.warning(f"Question {i+1} is a list, attempting to convert: {question}")
+                if len(question) > 0:
+                    question_text = str(question[0]) if question[0] is not None else f'Question {i+1}'
+                    normalized_question = {
+                        'id': i + 1,
+                        'question_text': question_text,
+                        'question_type': 'open_ended',
+                        'options': [],
+                        'correct_answer': '',
+                        'explanation': 'No explanation provided',
+                        'difficulty': 'medium'
+                    }
+                    normalized_questions.append(normalized_question)
+                else:
+                    logger.warning(f"Skipping empty list question {i+1}")
+                    continue
+            else:
+                # Unknown format - create a fallback question
+                logger.warning(f"Unknown question format {i+1}: {type(question)} - {question}")
+                normalized_question = {
+                    'id': i + 1,
+                    'question_text': f'Question {i+1}: {str(question)}',
+                    'question_type': 'open_ended',
+                    'options': [],
+                    'correct_answer': '',
+                    'explanation': 'No explanation provided',
+                    'difficulty': 'medium'
+                }
+                normalized_questions.append(normalized_question)
+        
+        if not normalized_questions:
+            logger.error("No valid questions found after normalization")
+            return None
+            
+        # Ensure answers is a list and contains valid data
+        if not isinstance(answers, list):
+            logger.error(f"Answers is not a list: {type(answers)}")
+            return None
+            
+        # Ensure we have matching counts - adjust if needed
+        if len(answers) != len(normalized_questions):
+            logger.warning(f"Answer count ({len(answers)}) doesn't match question count ({len(normalized_questions)})")
+            # Pad answers with empty strings if we have fewer answers than questions
+            while len(answers) < len(normalized_questions):
+                answers.append("")
+            # Truncate answers if we have more answers than questions
+            answers = answers[:len(normalized_questions)]
+            logger.info(f"Adjusted answer count to match questions: {len(answers)} answers for {len(normalized_questions)} questions")
+        
+        # Build grading prompt with normalized questions
+        grading_prompt = self._build_grading_prompt(resource, normalized_questions, answers)
         
         # Get AI evaluation
         try:
@@ -605,6 +690,7 @@ Best suited for learners who want to develop practical skills in {resource['skil
                     return result
             
             # If no AI available, return None to use fallback
+            logger.warning("No AI API keys available for grading")
             return None
             
         except Exception as e:
@@ -649,63 +735,85 @@ QUESTIONS AND ANSWERS TO EVALUATE:
 """
         
         for i, (question, answer) in enumerate(zip(questions, answers)):
-            # Handle different question formats
-            if isinstance(question, dict):
-                question_text = question.get('question_text', question.get('question', ''))
-                correct_answer = question.get('correct_answer', '')
-                explanation = question.get('explanation', 'No explanation provided')
-                question_type = question.get('question_type', question.get('type', 'unknown'))
-                options = question.get('options', [])
-            else:
-                question_text = str(question)
-                correct_answer = ''
-                explanation = 'No explanation provided'
-                question_type = 'unknown'
-                options = []
-            
-            # Format the answer based on question type and answer type
-            formatted_answer = str(answer)
-            
-            # If it's a multiple choice question and answer is an integer, convert to option text
-            if question_type == 'multiple_choice' and isinstance(answer, int) and options:
-                if 0 <= answer < len(options):
-                    formatted_answer = options[answer]
+            # Handle different question formats with robust error checking
+            try:
+                if isinstance(question, dict):
+                    question_text = question.get('question_text', question.get('question', f'Question {i+1}'))
+                    correct_answer = question.get('correct_answer', 'No correct answer provided')
+                    explanation = question.get('explanation', 'No explanation provided')
+                    question_type = question.get('question_type', question.get('type', 'open_ended'))
+                    options = question.get('options', [])
+                elif isinstance(question, str):
+                    question_text = question
+                    correct_answer = 'No correct answer provided'
+                    explanation = 'No explanation provided'
+                    question_type = 'open_ended'
+                    options = []
                 else:
-                    formatted_answer = f"Option {answer} (invalid)"
-            
-            prompt += f"""
+                    # Fallback for unexpected question formats
+                    question_text = f"Question {i+1}: {str(question)}"
+                    correct_answer = 'No correct answer provided'
+                    explanation = 'No explanation provided'
+                    question_type = 'open_ended'
+                    options = []
+                
+                # Format the answer based on question type and answer type
+                formatted_answer = str(answer) if answer is not None else "No answer provided"
+                
+                # If it's a multiple choice question and answer is an integer, convert to option text
+                if question_type == 'multiple_choice' and isinstance(answer, int) and options:
+                    if 0 <= answer < len(options):
+                        formatted_answer = f"Option {answer + 1}: {options[answer]}"
+                    else:
+                        formatted_answer = f"Option {answer} (invalid - out of range)"
+                elif question_type == 'multiple_choice' and isinstance(answer, str) and answer.isdigit():
+                    # Handle string numbers for multiple choice
+                    answer_num = int(answer)
+                    if options and 0 <= answer_num < len(options):
+                        formatted_answer = f"Option {answer_num + 1}: {options[answer_num]}"
+                    else:
+                        formatted_answer = f"Option {answer_num} (invalid - out of range)"
+                
+                prompt += f"""
 Question {i+1}: {question_text}
 Student Answer: {formatted_answer}
 Correct Answer: {correct_answer}
 Explanation: {explanation}
 
 """
+            except Exception as e:
+                logger.warning(f"Error processing question {i+1}: {e}")
+                prompt += f"""
+Question {i+1}: Error processing question
+Student Answer: {str(answer) if answer is not None else "No answer"}
+Correct Answer: Unable to determine
+Explanation: Question format error
+
+"""
         
         prompt += """
-Please provide your evaluation in this JSON format:
+Please provide your evaluation in the following JSON format:
 {
     "overall_score": 85,
     "total_questions": 5,
     "questions_evaluated": [
         {
             "question_number": 1,
-            "student_answer": "...",
-            "correct_answer": "...",
-            "score": 85,
+            "student_answer": "Student's answer here",
+            "correct_answer": "Expected answer",
+            "score": 90,
             "max_score": 100,
-            "feedback": "Your answer demonstrates good understanding of the core concepts. You correctly identified... However, you could improve by...",
-            "strengths": ["Correct identification of key concepts", "Good use of examples"],
-            "improvements": ["More detail needed on implementation", "Consider edge cases"],
+            "feedback": "Detailed feedback on this answer",
+            "strengths": ["What they got right"],
+            "improvements": ["Areas for improvement"],
             "partial_credit_given": true
         }
     ],
-    "overall_feedback": "Overall, you show strong understanding of the material. Focus on providing more detailed explanations and practical examples.",
-    "study_recommendations": ["Review the section on advanced concepts", "Practice with real-world examples"],
+    "overall_feedback": "General feedback on performance",
+    "study_recommendations": ["Specific study suggestions"],
     "passing_grade": true,
-    "grade_letter": "B+"
+    "grade_letter": "A"
 }
-
-Be encouraging but honest in your feedback. Recognize effort and partial understanding while clearly indicating areas for improvement.
 """
         
         return prompt

@@ -21,6 +21,7 @@ from datetime import datetime
 from flask import Flask, render_template, jsonify, request, redirect
 from flask_cors import CORS
 from dotenv import load_dotenv
+import sqlite3
 
 # Load environment variables from .env file
 load_dotenv()
@@ -220,7 +221,7 @@ def discover_resources_background(task_id, skill):
         task_data['current_step'] = 'Checking for existing resources...'
         update_discovery_task(task_id, task_data)
         
-        existing_resources = db_manager.search_resources(query=skill, limit=20)
+        existing_resources = learning_service.db_manager.search_resources(query=skill, limit=20)
         if existing_resources and len(existing_resources) >= 5:
             # Return cached results
             grouped_resources = {}
@@ -282,7 +283,7 @@ def discover_resources_background(task_id, skill):
         stored_resources = []
         
         # Find skill ID for linking
-        skills = db_manager.get_emerging_skills()
+        skills = learning_service.db_manager.get_emerging_skills()
         
         # Normalize skill name for better matching
         skill_normalized = skill.lower().replace('-', ' ').replace('_', ' ').strip()
@@ -314,11 +315,11 @@ def discover_resources_background(task_id, skill):
                 }
                 
                 # Add to database
-                resource_id = db_manager.add_resource(db_resource)
+                resource_id = learning_service.db_manager.add_resource(db_resource)
                 stored_resources.append(resource_id)
                 
                 if skill_id:
-                    db_manager.link_skill_to_resource(
+                    learning_service.db_manager.link_skill_to_resource(
                         skill_id, 
                         resource_id, 
                         resource_data['quality_score'],
@@ -378,7 +379,7 @@ def api_emerging_skills():
     """Get emerging skills from database"""
     try:
         # Get emerging skills from database
-        skills = db_manager.get_emerging_skills(limit=20)
+        skills = learning_service.db_manager.get_emerging_skills(limit=20)
         
         # If no skills in database, add some sample data
         if not skills:
@@ -432,10 +433,10 @@ def api_emerging_skills():
             
             # Add sample skills to database
             for skill_data in sample_skills:
-                db_manager.add_emerging_skill(skill_data)
+                learning_service.db_manager.add_emerging_skill(skill_data)
             
             # Retrieve the newly added skills
-            skills = db_manager.get_emerging_skills(limit=20)
+            skills = learning_service.db_manager.get_emerging_skills(limit=20)
         
         return jsonify({
             "emerging_skills": skills,
@@ -454,7 +455,7 @@ def api_discover_resources(skill):
     """Start background resource discovery for a specific skill"""
     try:
         # Check for existing cached resources first
-        existing_resources = db_manager.search_resources(query=skill, limit=20)
+        existing_resources = learning_service.db_manager.search_resources(query=skill, limit=20)
         if existing_resources and len(existing_resources) >= 8:
             # Return cached results immediately if we have enough
             grouped_resources = {}
@@ -515,7 +516,7 @@ def api_discovery_status(task_id):
     
     if not task:
         # Try to return cached resources if task not found
-        existing_resources = db_manager.search_resources(query=task_id, limit=10)  # Try skill name as fallback
+        existing_resources = learning_service.db_manager.search_resources(query=task_id, limit=10)  # Try skill name as fallback
         if existing_resources:
             grouped_resources = {}
             for resource in existing_resources:
@@ -573,7 +574,7 @@ def api_browse_database():
         limit = int(request.args.get('limit', '100'))
         
         # Search resources
-        resources = db_manager.search_resources(
+        resources = learning_service.db_manager.search_resources(
             query=query if query else None,
             skill_category=skill_category if skill_category else None,
             resource_type=resource_type if resource_type else None,
@@ -583,7 +584,7 @@ def api_browse_database():
         )
         
         # Get database stats
-        stats = db_manager.get_resource_stats()
+        stats = learning_service.db_manager.get_resource_stats()
         
         return jsonify({
             "resources": resources,
@@ -606,14 +607,14 @@ def api_browse_database():
 def api_database_stats():
     """Get database statistics"""
     try:
-        stats = db_manager.get_resource_stats()
+        stats = learning_service.db_manager.get_resource_stats()
         
         # Get emerging skills count
-        skills = db_manager.get_emerging_skills()
+        skills = learning_service.db_manager.get_emerging_skills()
         stats['emerging_skills_count'] = len(skills)
         
         # Get resources by category
-        all_resources = db_manager.search_resources(limit=1000)
+        all_resources = learning_service.db_manager.search_resources(limit=1000)
         by_category = {}
         by_type = {}
         by_quality = {"high": 0, "medium": 0, "low": 0}
@@ -650,7 +651,7 @@ def api_database_stats():
 def api_resources():
     """Get all resources - basic endpoint for frontend"""
     try:
-        resources = db_manager.get_all_resources()
+        resources = learning_service.db_manager.get_all_resources()
         
         return jsonify({
             "resources": resources,
@@ -666,10 +667,10 @@ def api_resources():
 def api_skill_resources(skill_id):
     """Get all resources for a specific skill"""
     try:
-        resources = db_manager.get_resources_for_skill(skill_id)
+        resources = learning_service.db_manager.get_resources_for_skill(skill_id)
         
         # Get skill info
-        skills = db_manager.get_emerging_skills()
+        skills = learning_service.db_manager.get_emerging_skills()
         skill_info = next((s for s in skills if s['id'] == skill_id), None)
         
         return jsonify({
@@ -756,7 +757,7 @@ def emergency_restore():
         }
         
         # Add Prompt Engineering skill if not exists
-        skills = db_manager.get_emerging_skills()
+        skills = learning_service.db_manager.get_emerging_skills()
         prompt_skill_exists = any('prompt' in skill['skill_name'].lower() for skill in skills)
         
         if not prompt_skill_exists:
@@ -769,11 +770,11 @@ def emergency_restore():
                 'description': 'Mastering the art and science of crafting effective prompts for AI language models to achieve desired outcomes.',
                 'related_skills': ['AI-Enhanced SIEM', 'Vibe Coding']
             }
-            skill_id = db_manager.add_emerging_skill(prompt_engineering_data)
+            skill_id = learning_service.db_manager.add_emerging_skill(prompt_engineering_data)
             logger.info(f"✅ Added Prompt Engineering skill with ID: {skill_id}")
         
         # Refresh skills list
-        skills = db_manager.get_emerging_skills()
+        skills = learning_service.db_manager.get_emerging_skills()
         
         # Add sample resources
         total_added = 0
@@ -788,16 +789,16 @@ def emergency_restore():
             if skill:
                 for resource_data in resources:
                     # Check if resource already exists
-                    existing = db_manager.search_resources(query=resource_data['title'][:20], limit=1)
+                    existing = learning_service.db_manager.search_resources(query=resource_data['title'][:20], limit=1)
                     if not existing:
                         # Add required fields for database
                         resource_data['skill_category'] = skill['category']
                         resource_data['learning_level'] = 'intermediate'
                         
-                        resource_id = db_manager.add_resource(resource_data)
+                        resource_id = learning_service.db_manager.add_resource(resource_data)
                         if resource_id:
                             # Map resource to skill
-                            db_manager.link_skill_to_resource(
+                            learning_service.db_manager.link_skill_to_resource(
                                 skill_id=skill['id'],
                                 resource_id=resource_id,
                                 relevance_score=0.9,
@@ -825,17 +826,24 @@ def emergency_restore():
 
 @app.route('/emergency-restore-full', methods=['POST'])
 def emergency_restore_full():
-    """Complete database restoration - accepts full database export"""
+    """Complete restoration from backup with skills, resources, and mappings"""
+    logger.info("🚨 COMPLETE DATABASE RESTORE STARTED")
     try:
-        logger.info("🚨 COMPLETE DATABASE RESTORATION STARTED")
+        # Read backup data
+        backup_file = 'complete_restoration_data.json'
+        if not os.path.exists(backup_file):
+            logger.error(f"Backup file not found: {backup_file}")
+            return jsonify({
+                'status': 'error', 
+                'message': f'Backup file not found: {backup_file}'
+            }), 404
         
-        data = request.get_json()
-        if not data:
-            return jsonify({'status': 'error', 'message': 'No data provided'}), 400
+        with open(backup_file, 'r') as f:
+            backup_data = json.load(f)
         
-        skills_data = data.get('skills', [])
-        resources_data = data.get('resources', [])
-        mappings_data = data.get('mappings', [])
+        skills_data = backup_data.get('skills', [])
+        resources_data = backup_data.get('resources', [])
+        mappings_data = backup_data.get('mappings', [])
         
         logger.info(f"Restoring {len(skills_data)} skills, {len(resources_data)} resources")
         
@@ -844,7 +852,7 @@ def emergency_restore_full():
         for skill_data in skills_data:
             try:
                 # Check if skill exists
-                existing_skills = db_manager.get_emerging_skills()
+                existing_skills = learning_service.db_manager.get_emerging_skills()
                 existing_skill = None
                 for s in existing_skills:
                     if s['skill_name'].lower() == skill_data['skill_name'].lower():
@@ -855,7 +863,7 @@ def emergency_restore_full():
                     skill_mapping[skill_data['skill_name']] = existing_skill['id']
                     logger.info(f"Using existing skill: {skill_data['skill_name']}")
                 else:
-                    skill_id = db_manager.add_emerging_skill(skill_data)
+                    skill_id = learning_service.db_manager.add_emerging_skill(skill_data)
                     skill_mapping[skill_data['skill_name']] = skill_id
                     logger.info(f"Added skill: {skill_data['skill_name']} (ID: {skill_id})")
                     
@@ -869,12 +877,12 @@ def emergency_restore_full():
         for resource_data in resources_data:
             try:
                 # Check if resource already exists
-                existing = db_manager.search_resources(query=resource_data['title'][:20], limit=1)
+                existing = learning_service.db_manager.search_resources(query=resource_data['title'][:20], limit=1)
                 if existing:
                     resource_mapping[resource_data['title']] = existing[0]['id']
                     continue
                 
-                resource_id = db_manager.add_resource(resource_data)
+                resource_id = learning_service.db_manager.add_resource(resource_data)
                 if resource_id:
                     resource_mapping[resource_data['title']] = resource_id
                     added_resources += 1
@@ -894,7 +902,7 @@ def emergency_restore_full():
                     skill_id = skill_mapping[skill_name]
                     resource_id = resource_mapping[resource_title]
                     
-                    db_manager.link_skill_to_resource(
+                    learning_service.db_manager.link_skill_to_resource(
                         skill_id=skill_id,
                         resource_id=resource_id,
                         relevance_score=mapping.get('relevance_score', 0.9),
@@ -932,13 +940,13 @@ def admin_panel():
     """Admin panel for managing skills and discovery"""
     try:
         # Get current skills
-        skills = db_manager.get_emerging_skills()
+        skills = learning_service.db_manager.get_emerging_skills()
         
         # Get discovery statistics
-        base_stats = db_manager.get_resource_stats()
+        base_stats = learning_service.db_manager.get_resource_stats()
         
         # Get quality breakdown for admin panel
-        resources = db_manager.search_resources(limit=1000)
+        resources = learning_service.db_manager.search_resources(limit=1000)
         quality_breakdown = {'high': 0, 'medium': 0, 'low': 0}
         for resource in resources:
             score = resource.get('quality_score', 0)
@@ -989,28 +997,35 @@ def api_add_skill():
         demand_trend = data.get('demand_trend', 'emerging').strip()
         
         # Check if skill already exists
-        existing_skills = db_manager.get_emerging_skills()
-        if any(s['skill_name'].lower() == skill_name.lower() for s in existing_skills):
-            return jsonify({"error": "Skill already exists"}), 400
+        existing_skills = learning_service.db_manager.get_emerging_skills()
+        for skill in existing_skills:
+            if skill['skill_name'].lower() == skill_name.lower():
+                return jsonify({"error": "Skill already exists"}), 400
         
-        # Add the skill
+        # Add the new skill
         skill_data = {
-            "skill_name": skill_name,
-            "description": description or f"Emerging skill in {category}",
-            "category": category,
-            "urgency_score": max(0.0, min(1.0, urgency_score)),
-            "demand_trend": demand_trend,
-            "source_analysis": "manual_admin_entry"
+            'skill_name': skill_name,
+            'category': data.get('category', 'general'),
+            'urgency_score': data.get('urgency_score', 5.0),
+            'demand_trend': data.get('demand_trend', 'stable'),
+            'source_analysis': data.get('source_analysis', 'Manual addition'),
+            'description': data.get('description', ''),
+            'related_skills': data.get('related_skills', [])
         }
         
-        skill_id = db_manager.add_emerging_skill(skill_data)
-        
-        return jsonify({
-            "success": True,
-            "message": f"Skill '{skill_name}' added successfully",
-            "skill_id": skill_id,
-            "skill_data": skill_data
-        })
+        skill_id = learning_service.db_manager.add_emerging_skill(skill_data)
+        if skill_id:
+            logger.info(f"✅ Added new skill: {skill_name}")
+            # Get updated skills list
+            skills = learning_service.db_manager.get_emerging_skills(limit=20)
+            return jsonify({
+                "status": "success",
+                "message": f"Skill '{skill_name}' added successfully",
+                "skill_id": skill_id,
+                "skills": skills
+            })
+        else:
+            return jsonify({"error": "Failed to add skill"}), 500
         
     except Exception as e:
         logger.error(f"Error adding skill: {e}")
@@ -1093,7 +1108,7 @@ def api_import_forecast():
         # Import mode - actually create the skills
         created_skills = []
         updated_skills = []
-        existing_skills = db_manager.get_emerging_skills()
+        existing_skills = learning_service.db_manager.get_emerging_skills()
         existing_skill_names = [s['skill_name'].lower() for s in existing_skills]
         
         for skill_data in parsed_skills:
@@ -1108,7 +1123,7 @@ def api_import_forecast():
             else:
                 # Create new skill
                 skill_data['source_analysis'] = 'ai_horizon_forecast_import'
-                skill_id = db_manager.add_emerging_skill(skill_data)
+                skill_id = learning_service.db_manager.add_emerging_skill(skill_data)
                 created_skills.append({
                     'skill_name': skill_data['skill_name'],
                     'skill_id': skill_id
@@ -1299,14 +1314,14 @@ def skills_overview():
     """Display overview of all emerging skills with learn-more links"""
     try:
         # Get all skills from database
-        skills = db_manager.get_emerging_skills()
+        skills = learning_service.db_manager.get_emerging_skills()
         
         # Calculate statistics for each skill
         skill_stats = []
         for skill in skills:
             # Flatten skill data for template with defensive coding
             skill_data = dict(skill)  # Copy all skill fields
-            skill_data['resource_count'] = len(db_manager.get_resources_for_skill(skill['id']))
+            skill_data['resource_count'] = len(learning_service.db_manager.get_resources_for_skill(skill['id']))
             skill_data['learn_more_url'] = f"/skill/{skill['skill_name'].lower().replace(' ', '-').replace('&', 'and')}"
             
             # Ensure required fields exist with defaults
@@ -1317,7 +1332,7 @@ def skills_overview():
             skill_data.setdefault('resource_types', [])
             
             # Add resource types based on actual resources
-            skill_resources = db_manager.get_resources_for_skill(skill['id'])
+            skill_resources = learning_service.db_manager.get_resources_for_skill(skill['id'])
             resource_types = list(set(r.get('resource_type', 'unknown') for r in skill_resources))
             skill_data['resource_types'] = resource_types[:5]  # Limit to 5 types
             
@@ -1325,7 +1340,7 @@ def skills_overview():
         
         # Get overall platform statistics
         total_skills = len(skills)
-        total_resources = len(db_manager.search_resources(limit=1000))  # Get all resources
+        total_resources = len(learning_service.db_manager.search_resources(limit=1000))  # Get all resources
         
         return render_template('skills_overview.html', 
                              skills=skill_stats,
@@ -1350,6 +1365,10 @@ def skill_detail(skill_name):
     """Enhanced skill page with comprehensive learning experience"""
     logger.info(f"Skill detail requested for: '{skill_name}'")
     try:
+        # Add debugging for database and learning service
+        logger.info(f"DEBUG: learning_service type: {type(learning_service)}")
+        logger.info(f"DEBUG: learning_service.db_manager type: {type(learning_service.db_manager)}")
+        
         # Get session ID from query params or create new one
         session_id = request.args.get('session_id')
         difficulty_filter = request.args.get('difficulty')
@@ -1358,6 +1377,16 @@ def skill_detail(skill_name):
         # Convert URL format back to skill name with robust matching
         target_skill_name = normalize_skill_name_from_url(skill_name)
         logger.info(f"Converted skill name: '{skill_name}' -> '{target_skill_name}'")
+        
+        # Add database schema validation
+        try:
+            with sqlite3.connect('data/aih_edu.db') as conn:
+                cursor = conn.cursor()
+                cursor.execute("PRAGMA table_info(skill_learning_paths)")
+                columns = [col[1] for col in cursor.fetchall()]
+                logger.info(f"DEBUG: skill_learning_paths columns: {columns}")
+        except Exception as schema_e:
+            logger.error(f"DEBUG: Schema check failed: {schema_e}")
         
         # Get comprehensive learning experience
         learning_experience = learning_service.get_skill_learning_experience(
@@ -1388,20 +1417,23 @@ def skill_detail(skill_name):
         return render_template('skill_not_found.html', skill_name=skill_name), 404
     except Exception as e:
         logger.error(f"Error loading enhanced skill detail for {skill_name}: {e}")
+        logger.error(f"DEBUG: Full error details: {e.__class__.__name__}: {str(e)}")
+        import traceback
+        logger.error(f"DEBUG: Traceback: {traceback.format_exc()}")
         return render_template('skill_not_found.html', skill_name=skill_name), 500
 
 def normalize_skill_name_from_url(url_skill_name: str) -> str:
     """Convert URL skill name to match database skill names"""
     try:
         # Get all skills from database to find best match
-        skills = db_manager.get_emerging_skills()
+        skills = learning_service.db_manager.get_emerging_skills()
         
         # Create normalized URL name (replace dashes with spaces, lowercase)
         url_normalized = url_skill_name.lower().replace('-', ' ').strip()
         
         # Try exact match first (after normalization)
         for skill in skills:
-            skill_normalized = skill['skill_name'].lower().strip()
+            skill_normalized = skill['skill_name'].lower().replace('-', ' ').strip()
             if skill_normalized == url_normalized:
                 return skill['skill_name']
         
@@ -1749,49 +1781,53 @@ def fix_categorization():
             'advanced': ['advanced', 'expert', 'master', 'professional', 'enterprise', 'architecture']
         }
         
-        # Get all resources
-        resources = db_manager.get_all_resources()
+        # Get all resources that need categorization fixes
+        resources = learning_service.db_manager.get_all_resources()
+        
         updated_count = 0
+        cost_distribution = {}
+        difficulty_distribution = {}
         
         for resource in resources:
             resource_id = resource['id']
+            
+            # Determine cost_type based on resource type and URL
+            cost_type = 'free'
+            if resource.get('resource_type') == 'course':
+                # Check if it's a paid platform
+                url = resource.get('url', '').lower()
+                if any(platform in url for platform in ['udemy', 'coursera', 'pluralsight', 'linkedin-learning']):
+                    cost_type = 'paid'
+                elif 'youtube' in url or 'github' in url or 'docs' in url:
+                    cost_type = 'free'
+            elif resource.get('resource_type') in ['documentation', 'article', 'video', 'tool']:
+                cost_type = 'free'
+            
+            # Determine difficulty based on content analysis
+            difficulty_level = 'intermediate'
             title = resource.get('title', '').lower()
             description = resource.get('description', '').lower()
-            resource_type = resource.get('resource_type', '')
             
-            # Determine cost type
-            new_cost_type = cost_categorization.get(resource_type, 'unknown')
-            
-            # Special cases for cost type
-            if 'free' in title or 'free' in description:
-                new_cost_type = 'free'
-            elif 'paid' in title or 'premium' in title:
-                new_cost_type = 'paid'
-            elif 'udemy.com' in description or 'coursera.org' in description:
-                new_cost_type = 'paid'
-            
-            # Determine difficulty level
-            content = f"{title} {description}"
-            new_difficulty_level = 'intermediate'  # Default
-            
-            # Check for beginner indicators
-            if any(keyword in content for keyword in difficulty_keywords['beginner']):
-                new_difficulty_level = 'beginner'
-            # Check for advanced indicators  
-            elif any(keyword in content for keyword in difficulty_keywords['advanced']):
-                new_difficulty_level = 'advanced'
+            if any(word in title or word in description for word in ['beginner', 'intro', 'basic', 'fundamentals']):
+                difficulty_level = 'beginner'
+            elif any(word in title or word in description for word in ['advanced', 'expert', 'mastery', 'deep dive']):
+                difficulty_level = 'advanced'
             
             # Update the resource
-            success = db_manager.update_resource_categorization(
-                resource_id, new_cost_type, new_difficulty_level
+            success = learning_service.db_manager.update_resource_categorization(
+                resource_id, 
+                cost_type, 
+                difficulty_level
             )
             
             if success:
                 updated_count += 1
+                cost_distribution[cost_type] = cost_distribution.get(cost_type, 0) + 1
+                difficulty_distribution[difficulty_level] = difficulty_distribution.get(difficulty_level, 0) + 1
         
-        # Get updated distribution
-        cost_distribution = db_manager.get_cost_distribution()
-        difficulty_distribution = db_manager.get_difficulty_distribution()
+        # Get final distributions
+        cost_distribution = learning_service.db_manager.get_cost_distribution()
+        difficulty_distribution = learning_service.db_manager.get_difficulty_distribution()
         
         return jsonify({
             'success': True,
@@ -1820,12 +1856,12 @@ def api_resource_questions(resource_id):
         logger.info(f"Retrieving questions for resource {resource_id}")
         
         # Get resource details
-        resource = db_manager.get_resource_by_id(resource_id)
+        resource = learning_service.db_manager.get_resource_by_id(resource_id)
         if not resource:
             return jsonify({'error': 'Resource not found'}), 404
         
         # Try to get questions from learning_content table
-        questions = db_manager.get_resource_questions(resource_id)
+        questions = learning_service.db_manager.get_resource_questions(resource_id)
         
         if questions:
             return jsonify({
@@ -1844,7 +1880,7 @@ def api_resource_questions(resource_id):
                 analysis = enhanced_content_analyzer.analyze_resource_content(resource_id)
                 if analysis and analysis.comprehension_questions:
                     # Store the generated questions
-                    stored = db_manager.store_resource_questions(resource_id, analysis.comprehension_questions)
+                    stored = learning_service.db_manager.store_resource_questions(resource_id, analysis.comprehension_questions)
                     if stored:
                         return jsonify({
                             'success': True,
@@ -1883,12 +1919,12 @@ def api_resource_exercises(resource_id):
         logger.info(f"Retrieving exercises for resource {resource_id}")
         
         # Get resource details
-        resource = db_manager.get_resource_by_id(resource_id)
+        resource = learning_service.db_manager.get_resource_by_id(resource_id)
         if not resource:
             return jsonify({'error': 'Resource not found'}), 404
         
         # Try to get exercises from learning_content table
-        exercises = db_manager.get_resource_exercises(resource_id)
+        exercises = learning_service.db_manager.get_resource_exercises(resource_id)
         
         if exercises:
             return jsonify({
@@ -1906,7 +1942,7 @@ def api_resource_exercises(resource_id):
                 analysis = enhanced_content_analyzer.analyze_resource_content(resource_id)
                 if analysis and analysis.practical_exercises:
                     # Store the generated exercises
-                    stored = db_manager.store_resource_exercises(resource_id, analysis.practical_exercises)
+                    stored = learning_service.db_manager.store_resource_exercises(resource_id, analysis.practical_exercises)
                     if stored:
                         return jsonify({
                             'success': True,
@@ -1951,7 +1987,7 @@ def api_submit_quiz(resource_id):
             return jsonify({'error': 'No answers provided'}), 400
         
         # Get the questions for this resource
-        questions = db_manager.get_resource_questions(resource_id)
+        questions = learning_service.db_manager.get_resource_questions(resource_id)
         if not questions:
             return jsonify({'error': 'No questions found for this resource'}), 404
         
@@ -1982,7 +2018,7 @@ def api_submit_quiz(resource_id):
         
         # Store quiz attempt (optional)
         try:
-            db_manager.store_quiz_attempt(resource_id, answers, score_percentage)
+            learning_service.db_manager.store_quiz_attempt(resource_id, answers, score_percentage)
         except:
             pass  # Don't fail if storage doesn't work
         
@@ -2016,14 +2052,24 @@ def api_grade_quiz_ai(resource_id):
             return jsonify({'error': 'No answers provided'}), 400
         
         # Get the questions for this resource
-        questions = db_manager.get_resource_questions(resource_id)
+        questions = learning_service.db_manager.get_resource_questions(resource_id)
         if not questions:
             return jsonify({'error': 'No questions found for this resource'}), 404
         
         # Get resource details for context
-        resource = db_manager.get_resource_by_id(resource_id)
+        resource = learning_service.db_manager.get_resource_by_id(resource_id)
         if not resource:
             return jsonify({'error': 'Resource not found'}), 404
+        
+        # Validate that we have matching counts of questions and answers
+        if len(answers) != len(questions):
+            logger.warning(f"Answer count ({len(answers)}) doesn't match question count ({len(questions)}) for resource {resource_id}")
+            # Pad answers with empty strings if we have fewer answers than questions
+            while len(answers) < len(questions):
+                answers.append("")
+            # Truncate answers if we have more answers than questions
+            answers = answers[:len(questions)]
+            logger.info(f"Adjusted answer count to match questions for resource {resource_id}")
         
         # Try AI grading with timeout handling
         grading_results = None
@@ -2055,8 +2101,16 @@ def api_grade_quiz_ai(resource_id):
         basic_score = 0
         question_results = []
         
-        for i, (question, answer) in enumerate(zip(questions, answers)):
-            # Handle different question formats
+        # Ensure we have the same number of answers as questions
+        normalized_answers = list(answers)
+        while len(normalized_answers) < total_questions:
+            normalized_answers.append("")
+        
+        for i, question in enumerate(questions):
+            # Get the corresponding answer, defaulting to empty string if not provided
+            answer = normalized_answers[i] if i < len(normalized_answers) else ""
+            
+            # Handle different question formats - ensure question is always a dict
             if isinstance(question, dict):
                 question_text = question.get('question_text', question.get('question', ''))
                 correct_answer = question.get('correct_answer', '')
@@ -2064,19 +2118,22 @@ def api_grade_quiz_ai(resource_id):
                 question_type = question.get('question_type', question.get('type', 'unknown'))
                 options = question.get('options', [])
             else:
+                # Convert non-dict questions to dict format
                 question_text = str(question)
                 correct_answer = ''
                 explanation = 'No explanation provided'
-                question_type = 'unknown'
+                question_type = 'open_ended'
                 options = []
             
             # Basic scoring logic
             question_score = 0
             if question_type == 'multiple_choice' and isinstance(answer, int) and options:
-                if 0 <= answer < len(options) and options[answer] == correct_answer:
-                    question_score = 100
-                elif correct_answer and options[answer].lower().strip() == correct_answer.lower().strip():
-                    question_score = 100
+                if 0 <= answer < len(options):
+                    selected_option = options[answer]
+                    if selected_option == correct_answer or selected_option.lower().strip() == correct_answer.lower().strip():
+                        question_score = 100
+                    else:
+                        question_score = 0
                 else:
                     question_score = 0
             elif question_type == 'open_ended' and isinstance(answer, str):
@@ -2087,7 +2144,7 @@ def api_grade_quiz_ai(resource_id):
                     if correct_answer and any(word.lower() in answer.lower() for word in correct_answer.split() if len(word) > 3):
                         question_score = 85
                 else:
-                    question_score = 20  # Minimal credit for very short answers
+                    question_score = 20 if len(answer.strip()) > 0 else 0  # Minimal credit for very short answers
             else:
                 # Fallback comparison
                 if correct_answer and str(answer).lower().strip() == correct_answer.lower().strip():
@@ -2101,6 +2158,7 @@ def api_grade_quiz_ai(resource_id):
             
             question_results.append({
                 "question_number": i + 1,
+                "question_text": question_text,
                 "student_answer": str(answer),
                 "correct_answer": correct_answer,
                 "score": question_score,
@@ -2152,7 +2210,7 @@ def api_admin_content_status():
     """Get content generation status for all resources"""
     try:
         # Get all resources and their content status
-        resources = db_manager.get_all_resources()
+        resources = learning_service.db_manager.get_all_resources()
         
         content_status = {
             'total_resources': len(resources),
@@ -2167,11 +2225,11 @@ def api_admin_content_status():
             title = resource.get('title', 'Untitled')
             
             # Check for questions
-            questions = db_manager.get_resource_questions(resource_id)
+            questions = learning_service.db_manager.get_resource_questions(resource_id)
             has_questions = len(questions) > 0 if questions else False
             
             # Check for exercises  
-            exercises = db_manager.get_resource_exercises(resource_id)
+            exercises = learning_service.db_manager.get_resource_exercises(resource_id)
             has_exercises = len(exercises) > 0 if exercises else False
             
             if has_questions:
@@ -2215,13 +2273,13 @@ def api_admin_generate_content():
         
         if not resource_ids:
             # Get all resources needing content
-            resources = db_manager.get_all_resources()
+            resources = learning_service.db_manager.get_all_resources()
             resource_ids = []
             
             for resource in resources:
                 resource_id = resource['id']
-                questions = db_manager.get_resource_questions(resource_id)
-                exercises = db_manager.get_resource_exercises(resource_id)
+                questions = learning_service.db_manager.get_resource_questions(resource_id)
+                exercises = learning_service.db_manager.get_resource_exercises(resource_id)
                 
                 if not questions or not exercises:
                     resource_ids.append(resource_id)
@@ -2240,7 +2298,7 @@ def api_admin_generate_content():
             results['processed'] += 1
             
             try:
-                resource = db_manager.get_resource_by_id(resource_id)
+                resource = learning_service.db_manager.get_resource_by_id(resource_id)
                 if not resource:
                     continue
                 
@@ -2252,11 +2310,11 @@ def api_admin_generate_content():
                 if analysis:
                     # Store questions
                     if analysis.comprehension_questions:
-                        db_manager.store_resource_questions(resource_id, analysis.comprehension_questions)
+                        learning_service.db_manager.store_resource_questions(resource_id, analysis.comprehension_questions)
                     
                     # Store exercises
                     if analysis.practical_exercises:
-                        db_manager.store_resource_exercises(resource_id, analysis.practical_exercises)
+                        learning_service.db_manager.store_resource_exercises(resource_id, analysis.practical_exercises)
                     
                     results['successful'] += 1
                     results['details'].append({
@@ -2303,7 +2361,7 @@ def api_admin_restart_services():
         logger.info("Admin triggered service restart and content regeneration")
         
         # Get all resources that need content generation
-        resources = db_manager.get_all_resources()
+        resources = learning_service.db_manager.get_all_resources()
         
         processed_count = 0
         successful_count = 0
@@ -2314,14 +2372,14 @@ def api_admin_restart_services():
                 processed_count += 1
                 
                 # Queue resource for analysis
-                db_manager.queue_content_analysis(resource['id'])
+                learning_service.db_manager.queue_content_analysis(resource['id'])
                 
                 # Generate content immediately
                 content_result = content_analyzer.generate_learning_content(resource)
                 
                 if content_result and content_result.get('questions'):
                     # Store questions
-                    db_manager.store_learning_content(
+                    learning_service.db_manager.store_learning_content(
                         resource['id'], 
                         'questions', 
                         content_result['questions']
@@ -2329,7 +2387,7 @@ def api_admin_restart_services():
                     
                 if content_result and content_result.get('exercises'):
                     # Store exercises
-                    db_manager.store_learning_content(
+                    learning_service.db_manager.store_learning_content(
                         resource['id'], 
                         'exercises', 
                         content_result['exercises']
@@ -2364,7 +2422,7 @@ def api_admin_regenerate_content():
         logger.info("Admin triggered content regeneration for all resources")
         
         # Get all resources
-        resources = db_manager.get_all_resources()
+        resources = learning_service.db_manager.get_all_resources()
         processed_count = 0
         successful_count = 0
         
@@ -2378,7 +2436,7 @@ def api_admin_regenerate_content():
                 if content_result:
                     # Store questions
                     if content_result.get('questions'):
-                        db_manager.store_learning_content(
+                        learning_service.db_manager.store_learning_content(
                             resource['id'], 
                             'questions', 
                             content_result['questions']
@@ -2386,7 +2444,7 @@ def api_admin_regenerate_content():
                     
                     # Store exercises
                     if content_result.get('exercises'):
-                        db_manager.store_learning_content(
+                        learning_service.db_manager.store_learning_content(
                             resource['id'], 
                             'exercises', 
                             content_result['exercises']
