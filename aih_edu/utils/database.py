@@ -419,38 +419,80 @@ class DatabaseManager:
     
     def get_resource_stats(self) -> Dict[str, Any]:
         """Get database statistics"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            
-            # Total resources
-            cursor.execute("SELECT COUNT(*) FROM educational_resources")
-            total_resources = cursor.fetchone()[0]
-            
-            # Resources by category
-            cursor.execute('''
-                SELECT skill_category, COUNT(*) as count 
-                FROM educational_resources 
-                GROUP BY skill_category
-            ''')
-            by_category = dict(cursor.fetchall())
-            
-            # Resources by type
-            cursor.execute('''
-                SELECT resource_type, COUNT(*) as count 
-                FROM educational_resources 
-                GROUP BY resource_type
-            ''')
-            by_type = dict(cursor.fetchall())
-            
-            # Average quality score
-            cursor.execute("SELECT AVG(quality_score) FROM educational_resources")
-            avg_quality = cursor.fetchone()[0] or 0.0
-            
+        try:
+            with self._get_connection() as conn:
+                if self.is_postgres:
+                    with conn.cursor() as cursor:
+                        # Total resources
+                        cursor.execute("SELECT COUNT(*) FROM educational_resources")
+                        total_resources = cursor.fetchone()[0]
+                        
+                        # Resources by category
+                        cursor.execute('''
+                            SELECT skill_category, COUNT(*) as count 
+                            FROM educational_resources 
+                            GROUP BY skill_category
+                        ''')
+                        by_category = dict(cursor.fetchall())
+                        
+                        # Resources by type
+                        cursor.execute('''
+                            SELECT resource_type, COUNT(*) as count 
+                            FROM educational_resources 
+                            GROUP BY resource_type
+                        ''')
+                        by_type = dict(cursor.fetchall())
+                        
+                        # Average quality score
+                        cursor.execute("SELECT AVG(quality_score) FROM educational_resources")
+                        avg_quality = cursor.fetchone()[0] or 0.0
+                        
+                        return {
+                            'total_resources': total_resources,
+                            'by_category': by_category,
+                            'by_type': by_type,
+                            'average_quality': round(avg_quality, 2)
+                        }
+                else:
+                    cursor = conn.cursor()
+                    
+                    # Total resources
+                    cursor.execute("SELECT COUNT(*) FROM educational_resources")
+                    total_resources = cursor.fetchone()[0]
+                    
+                    # Resources by category
+                    cursor.execute('''
+                        SELECT skill_category, COUNT(*) as count 
+                        FROM educational_resources 
+                        GROUP BY skill_category
+                    ''')
+                    by_category = dict(cursor.fetchall())
+                    
+                    # Resources by type
+                    cursor.execute('''
+                        SELECT resource_type, COUNT(*) as count 
+                        FROM educational_resources 
+                        GROUP BY resource_type
+                    ''')
+                    by_type = dict(cursor.fetchall())
+                    
+                    # Average quality score
+                    cursor.execute("SELECT AVG(quality_score) FROM educational_resources")
+                    avg_quality = cursor.fetchone()[0] or 0.0
+                    
+                    return {
+                        'total_resources': total_resources,
+                        'by_category': by_category,
+                        'by_type': by_type,
+                        'average_quality': round(avg_quality, 2)
+                    }
+        except Exception as e:
+            logger.error(f"Error getting resource stats: {e}")
             return {
-                'total_resources': total_resources,
-                'by_category': by_category,
-                'by_type': by_type,
-                'average_quality': round(avg_quality, 2)
+                'total_resources': 0,
+                'by_category': {},
+                'by_type': {},
+                'average_quality': 0.0
             }
     
     def log_search(self, user_id: Optional[str], search_params: Dict[str, Any], results_count: int) -> None:
