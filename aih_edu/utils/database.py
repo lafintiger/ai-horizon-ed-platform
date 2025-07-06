@@ -360,7 +360,7 @@ class DatabaseManager:
                         sql = f'''
                             SELECT * FROM educational_resources 
                             WHERE {where_clause}
-                            ORDER BY quality_score DESC, popularity_score DESC, created_at DESC
+                            ORDER BY quality_score DESC, created_date DESC
                             LIMIT %s
                         '''
                         params.append(limit)
@@ -410,7 +410,7 @@ class DatabaseManager:
                     sql = f'''
                         SELECT * FROM educational_resources 
                         WHERE {where_clause}
-                        ORDER BY quality_score DESC, popularity_score DESC, created_at DESC
+                        ORDER BY quality_score DESC, created_date DESC
                         LIMIT ?
                     '''
                     params.append(limit)

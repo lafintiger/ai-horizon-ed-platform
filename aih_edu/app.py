@@ -1841,7 +1841,7 @@ def api_resource_questions(resource_id):
             
             # Use the existing content analyzer to generate questions
             try:
-                analysis = content_analyzer.analyze_resource_content(resource_id)
+                analysis = enhanced_content_analyzer.analyze_resource_content(resource_id)
                 if analysis and analysis.comprehension_questions:
                     # Store the generated questions
                     stored = db_manager.store_resource_questions(resource_id, analysis.comprehension_questions)
@@ -1903,7 +1903,7 @@ def api_resource_exercises(resource_id):
             logger.info(f"Generating exercises for resource {resource_id}: {resource.get('title', '')}")
             
             try:
-                analysis = content_analyzer.analyze_resource_content(resource_id)
+                analysis = enhanced_content_analyzer.analyze_resource_content(resource_id)
                 if analysis and analysis.practical_exercises:
                     # Store the generated exercises
                     stored = db_manager.store_resource_exercises(resource_id, analysis.practical_exercises)
