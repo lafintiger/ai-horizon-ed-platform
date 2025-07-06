@@ -26,36 +26,50 @@ class LearningExperienceService:
     def get_skill_learning_experience(self, skill_name: str, session_id: Optional[str] = None,
                                      difficulty_filter: Optional[str] = None,
                                      cost_filter: Optional[str] = None) -> Dict[str, Any]:
-        """Get complete learning experience for a skill"""
+        """Generate comprehensive learning experience for a skill with intelligent resource organization"""
         logger.info(f"Generating learning experience for skill: {skill_name}")
         
-        # Get skill data
+        # Find skill in database
         skills = self.db_manager.get_emerging_skills()
         logger.info(f"Found {len(skills)} skills in database")
-        logger.info(f"Looking for skill: '{skill_name}' (normalized)")
         
-        skill = next((s for s in skills if s['skill_name'].lower() == skill_name.lower()), None)
+        skill = None
+        skill_normalized = skill_name.lower().strip()
+        
+        logger.info(f"Looking for skill: '{skill_name}' (normalized)")
+        for s in skills:
+            if s['skill_name'].lower().strip() == skill_normalized:
+                skill = s
+                logger.info(f"FOUND exact match: {s['skill_name']}")
+                break
         
         if not skill:
-            available_skills = [s['skill_name'] for s in skills]
-            logger.warning(f"Skill '{skill_name}' not found. Available skills: {available_skills}")
+            logger.warning(f"Skill '{skill_name}' not found")
             raise ValueError(f"Skill '{skill_name}' not found")
         
         skill_id = skill['id']
+        logger.info(f"Using skill ID: {skill_id}")
         
-        # Get or create session
+        # Create or get session
         if not session_id:
             session_id = self.create_learning_session(skill_id)
         
         session_data = self.db_manager.get_learning_session(session_id)
         
         # Get enhanced resources with filtering
+        logger.info(f"Getting enhanced resources for skill ID {skill_id}")
         resources = self.db_manager.get_enhanced_resources_for_skill(
             skill_id, difficulty_filter, cost_filter
         )
+        logger.info(f"Retrieved {len(resources)} resources from database")
+        
+        # DEBUG: Log first few resources
+        for i, resource in enumerate(resources[:3]):
+            logger.info(f"Resource {i+1}: {resource.get('title', 'No title')} (ID: {resource.get('id', 'No ID')})")
         
         # Analyze and enhance resources if needed
         resources = self._ensure_resources_analyzed(resources, skill_id)
+        logger.info(f"After analysis: {len(resources)} resources")
         
         # Get or create learning paths
         learning_paths = self._get_or_create_learning_paths(skill_id, resources)
@@ -65,6 +79,8 @@ class LearningExperienceService:
         
         # Prepare resource categories
         resource_categories = self._categorize_resources(resources)
+        logger.info(f"Resource categories: {list(resource_categories.keys())}")
+        logger.info(f"Total categorized resources: {sum(len(v) for v in resource_categories.values())}")
         
         # Prepare progress data
         progress_data = self._calculate_progress(session_data, resources, learning_paths)

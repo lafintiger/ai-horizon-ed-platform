@@ -938,7 +938,7 @@ class DatabaseManager:
                     conn.cursor_factory = psycopg2.extras.RealDictCursor
                     with conn.cursor() as cursor:
                         # Build dynamic query with filters
-                        where_conditions = ["srm.skill_id = %s"]
+                        where_conditions = ["sr.skill_id = %s"]
                         params = [skill_id]
                         
                         if difficulty_filter:
@@ -952,9 +952,9 @@ class DatabaseManager:
                         where_clause = " AND ".join(where_conditions)
                         
                         cursor.execute(f'''
-                            SELECT er.*, srm.relevance_score, srm.resource_type_for_skill
+                            SELECT er.*, sr.relevance_score
                             FROM educational_resources er
-                            JOIN skill_resource_mapping srm ON er.id = srm.resource_id
+                            JOIN skill_resources sr ON er.id = sr.resource_id
                             WHERE {where_clause}
                             ORDER BY 
                                 er.sequence_order ASC,
@@ -974,7 +974,7 @@ class DatabaseManager:
                     cursor = conn.cursor()
                     
                     # Build dynamic query with filters
-                    where_conditions = ["srm.skill_id = ?"]
+                    where_conditions = ["sr.skill_id = ?"]
                     params = [skill_id]
                     
                     if difficulty_filter:
@@ -988,9 +988,9 @@ class DatabaseManager:
                     where_clause = " AND ".join(where_conditions)
                     
                     cursor.execute(f'''
-                        SELECT er.*, srm.relevance_score, srm.resource_type_for_skill
+                        SELECT er.*, sr.relevance_score
                         FROM educational_resources er
-                        JOIN skill_resource_mapping srm ON er.id = srm.resource_id
+                        JOIN skill_resources sr ON er.id = sr.resource_id
                         WHERE {where_clause}
                         ORDER BY 
                             er.sequence_order ASC,
