@@ -66,7 +66,16 @@ class AIServicesManager:
         """Initialize OpenAI client"""
         api_key = os.getenv('OPENAI_API_KEY')
         if api_key:
-            return openai.OpenAI(api_key=api_key)
+            try:
+                # Initialize with minimal configuration to avoid compatibility issues
+                return openai.OpenAI(
+                    api_key=api_key,
+                    timeout=30.0,
+                    max_retries=3
+                )
+            except Exception as e:
+                logger.error(f"Failed to initialize OpenAI client: {e}")
+                return None
         logger.warning("OpenAI API key not found")
         return None
     
