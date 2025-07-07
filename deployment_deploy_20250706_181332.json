@@ -1,8 +1,8 @@
 {
-  "deployment_id": "deploy_20250706_180554",
+  "deployment_id": "deploy_20250706_181332",
   "app_name": "ai-horizon-edu",
-  "started_at": "2025-07-06T18:05:54.749420",
-  "status": "failed",
+  "started_at": "2025-07-06T18:13:32.513016",
+  "status": "initializing",
   "phases": {
     "prerequisites": {
       "status": "success",
@@ -31,6 +31,29 @@
               "id": "f34d5bff-88b8-48c4-853d-35f5be1886d6",
               "name": "ai-horizon-edu"
             },
+            "created_at": "2025-07-07T01:13:16Z",
+            "description": "Rollback to v1",
+            "status": "succeeded",
+            "id": "4792f8bb-22b6-4d70-a644-564a3b590e7b",
+            "slug": null,
+            "updated_at": "2025-07-07T01:13:16Z",
+            "user": {
+              "email": "lafintiger@protonmail.com",
+              "id": "c6f05c7a-aa86-4572-8d5d-630800dd7aaa"
+            },
+            "version": 3,
+            "current": true,
+            "output_stream_url": null,
+            "artifacts": [],
+            "eligible_for_rollback": true,
+            "oci_image": null
+          },
+          {
+            "addon_plan_names": [],
+            "app": {
+              "id": "f34d5bff-88b8-48c4-853d-35f5be1886d6",
+              "name": "ai-horizon-edu"
+            },
             "created_at": "2025-07-07T01:05:40Z",
             "description": "Enable Logplex",
             "status": "succeeded",
@@ -42,7 +65,7 @@
               "id": "c6f05c7a-aa86-4572-8d5d-630800dd7aaa"
             },
             "version": 2,
-            "current": true,
+            "current": false,
             "output_stream_url": null,
             "artifacts": [],
             "eligible_for_rollback": true,
@@ -83,22 +106,35 @@
         "Validated runtime.txt"
       ],
       "issues": []
-    },
-    "deployment": {
-      "status": "failed",
-      "steps": [
-        "Added changes to git",
-        "Committed changes"
-      ],
-      "errors": [
-        "Failed to push to Heroku: "
-      ]
     }
   },
   "rollback_data": {
     "env_vars": {},
     "addons": [],
     "recent_releases": [
+      {
+        "addon_plan_names": [],
+        "app": {
+          "id": "f34d5bff-88b8-48c4-853d-35f5be1886d6",
+          "name": "ai-horizon-edu"
+        },
+        "created_at": "2025-07-07T01:13:16Z",
+        "description": "Rollback to v1",
+        "status": "succeeded",
+        "id": "4792f8bb-22b6-4d70-a644-564a3b590e7b",
+        "slug": null,
+        "updated_at": "2025-07-07T01:13:16Z",
+        "user": {
+          "email": "lafintiger@protonmail.com",
+          "id": "c6f05c7a-aa86-4572-8d5d-630800dd7aaa"
+        },
+        "version": 3,
+        "current": true,
+        "output_stream_url": null,
+        "artifacts": [],
+        "eligible_for_rollback": true,
+        "oci_image": null
+      },
       {
         "addon_plan_names": [],
         "app": {
@@ -116,7 +152,7 @@
           "id": "c6f05c7a-aa86-4572-8d5d-630800dd7aaa"
         },
         "version": 2,
-        "current": true,
+        "current": false,
         "output_stream_url": null,
         "artifacts": [],
         "eligible_for_rollback": true,
@@ -147,14 +183,5 @@
       }
     ]
   },
-  "errors": [],
-  "error": "Heroku deployment failed: ['Failed to push to Heroku: ']",
-  "failed_at": "2025-07-06T18:06:02.179903",
-  "rollback": {
-    "status": "success",
-    "steps": [
-      "Rolled back to v1"
-    ],
-    "errors": []
-  }
+  "errors": []
 }
