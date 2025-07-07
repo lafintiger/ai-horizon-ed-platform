@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}{{ skill.skill_name }} - AI-Horizon Ed Platform{% endblock %}
+
+{% block content %}
+<!-- Skill Header -->
+<div class="skill-detail-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-2">{{ skill.skill_name }}</h1>
+            <p class="lead mb-3">{{ skill.description }}</p>
+            <div class="d-flex flex-wrap gap-3">
+                <span class="badge bg-light text-dark fs-6">
+                    <i class="fas fa-tag me-1"></i>{{ skill.category or 'General' }}
+                </span>
+                <span class="badge bg-warning text-dark fs-6">
+                    <i class="fas fa-fire me-1"></i>Urgency: {{ "%.1f"|format(skill.urgency_score) }}
+                </span>
+                <span class="badge bg-info text-dark fs-6">
+                    <i class="fas fa-calendar me-1"></i>{{ skill.last_updated.strftime('%B %Y') if skill.last_updated else 'Recently Added' }}
+                </span>
+            </div>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <div class="bg-white bg-opacity-20 p-3 rounded">
+                <h4 class="mb-1">{{ learning_paths|length }}</h4>
+                <small>Learning Resources</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Market Demand Evidence -->
+{% if skill.market_demand_evidence %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Market Demand Evidence
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{{ skill.market_demand_evidence }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Learning Path -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-route me-2"></i>Learning Path
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if learning_paths %}
+                    <div class="row">
+                        {% for path, resource in learning_paths %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card h-100 border-left-primary">
+                                <div class="card-header bg-{{ 'success' if path.path_type == 'foundation' else 'warning' if path.path_type == 'intermediate' else 'danger' }} text-white">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-uppercase">{{ path.path_type }}</small>
+                                        {% if path.is_required %}
+                                            <span class="badge bg-light text-dark">Required</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ resource.title }}</h6>
+                                    <p class="card-text text-muted small">
+                                        {{ resource.description[:100] }}{% if resource.description|length > 100 %}...{% endif %}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-{{ 'play' if resource.resource_type == 'video' else 'book' if resource.resource_type == 'course' else 'file-alt' }} me-1"></i>
+                                            {{ resource.resource_type|title }}
+                                        </small>
+                                        {% if resource.estimated_duration_minutes %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ (resource.estimated_duration_minutes // 60) }}h{{ (resource.estimated_duration_minutes % 60) }}m
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="d-flex justify-content-between">
+                                        <a href="{{ url_for('resource_detail', resource_id=resource.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-info-circle me-1"></i>Details
+                                        </a>
+                                        <a href="{{ resource.url }}" target="_blank" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-external-link-alt me-1"></i>Start
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                        <h4>No Learning Resources Yet</h4>
+                        <p class="text-muted">
+                            Learning resources for this skill are being curated. Check back soon!
+                        </p>
+                        {% if session.get('admin_logged_in') %}
+                            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Add Resources
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Skills
+            </a>
+            <div>
+                <button onclick="window.print()" class="btn btn-outline-info">
+                    <i class="fas fa-print me-2"></i>Print
+                </button>
+                <button onclick="navigator.share ? navigator.share({title: '{{ skill.skill_name }}', url: window.location.href}) : alert('Sharing not supported')" class="btn btn-outline-success">
+                    <i class="fas fa-share me-2"></i>Share
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Mark progress
+var skillId = {{ skill.id }};
+
+function markCompleted(resourceId) {
+    // Save to localStorage
+    let progress = JSON.parse(localStorage.getItem('aiHorizonProgress') || '{}');
+    if (!progress[skillId]) {
+        progress[skillId] = {};
+    }
+    progress[skillId][resourceId] = {
+        completed: true,
+        date: new Date().toISOString()
+    };
+    localStorage.setItem('aiHorizonProgress', JSON.stringify(progress));
+    
+    // Visual feedback
+    let button = event.target;
+    button.classList.remove('btn-outline-success');
+    button.classList.add('btn-success');
+    button.innerHTML = '<i class="fas fa-check me-1"></i>Completed';
+    
+    if (typeof showNotification === 'function') {
+        showNotification('Resource marked as completed!', 'success');
+    }
+}
+
+// Load existing progress
+document.addEventListener('DOMContentLoaded', function() {
+    let progress = JSON.parse(localStorage.getItem('aiHorizonProgress') || '{}');
+    if (progress[skillId]) {
+        for (let resourceId in progress[skillId]) {
+            let button = document.querySelector('button[onclick="markCompleted(' + resourceId + ')"]');
+            if (button && progress[skillId][resourceId].completed) {
+                button.classList.remove('btn-outline-success');
+                button.classList.add('btn-success');
+                button.innerHTML = '<i class="fas fa-check me-1"></i>Completed';
+            }
+        }
+    }
+});
+</script>
+{% endblock %} 
