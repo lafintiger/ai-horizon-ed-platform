@@ -12,7 +12,13 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://vincentnestler@localhost/aih_edu_local')
+
+# Fix DATABASE_URL for Heroku (postgres:// -> postgresql://)
+database_url = os.getenv('DATABASE_URL', 'postgresql://vincentnestler@localhost/aih_edu_local')
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
