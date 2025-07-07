@@ -1,0 +1,52 @@
+{
+  "deployment_id": "deploy_20250706_175238",
+  "app_name": "ai-horizon-ed",
+  "started_at": "2025-07-06T17:52:38.183797",
+  "status": "failed",
+  "phases": {
+    "prerequisites": {
+      "status": "success",
+      "checks": {
+        "heroku_cli": true,
+        "git": true,
+        "heroku_auth": true,
+        "app_exists": true,
+        "local_db": true,
+        "file_requirements.txt": true,
+        "file_Procfile": true,
+        "file_runtime.txt": true,
+        "app_structure": true
+      },
+      "issues": []
+    },
+    "backup": {
+      "status": "failed",
+      "backup_data": {},
+      "errors": [
+        "Expecting value: line 1 column 1 (char 0)"
+      ]
+    },
+    "preparation": {
+      "status": "failed",
+      "actions": [
+        "Validated requirements.txt",
+        "Validated Procfile",
+        "Validated runtime.txt"
+      ],
+      "issues": [
+        "sqlite3 found in requirements.txt (should not be included)"
+      ]
+    }
+  },
+  "rollback_data": {},
+  "errors": [],
+  "error": "File preparation failed: ['sqlite3 found in requirements.txt (should not be included)']",
+  "failed_at": "2025-07-06T17:52:41.796783",
+  "rollback": {
+    "status": "failed",
+    "steps": [],
+    "errors": [
+      "Expecting value: line 1 column 1 (char 0)"
+    ]
+  }
+}

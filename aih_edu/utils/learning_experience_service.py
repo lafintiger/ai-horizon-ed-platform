@@ -368,7 +368,7 @@ class LearningExperienceService:
                         total_duration += duration
                     
                     path_data = {
-                        'path_description': f"{difficulty.title()} level learning path",
+                        'description': f"{difficulty.title()} level learning path",
                         'estimated_duration': total_duration,
                         'prerequisites': [f"Basic understanding of cybersecurity concepts"] if difficulty != 'beginner' else [],
                         'learning_milestones': [

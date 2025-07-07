@@ -854,13 +854,13 @@ class DatabaseManager:
             
             cursor.execute('''
                 INSERT INTO skill_learning_paths
-                (skill_id, path_name, path_description, resource_sequence, estimated_duration,
+                (skill_id, path_name, description, resource_sequence, estimated_duration,
                  difficulty_progression, prerequisites, learning_milestones, completion_projects)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 skill_id,
                 path_name,
-                path_data.get('path_description', ''),
+                path_data.get('description', ''),
                 sequence_json,
                 path_data.get('estimated_duration', 0),
                 difficulty_progression,

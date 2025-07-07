@@ -6,7 +6,7 @@ Flask-CORS==4.0.0
 Werkzeug==2.3.7
 
 # Database
-sqlite3  # Built-in with Python
+psycopg2-binary==2.9.7  # PostgreSQL for Heroku
 
 # HTTP Requests
 requests==2.31.0
@@ -46,5 +46,10 @@ aiohttp==3.8.5
 # Production Server (Required for Heroku)
 gunicorn==21.2.0
 
-# Optional: If integrating with main platform database
-# psycopg2-binary==2.9.7  # For PostgreSQL connection 
+# Additional dependencies for bulletproof deployment
+click==8.1.7
+itsdangerous==2.1.2
+MarkupSafe==2.1.3
+certifi==2023.7.22
+charset-normalizer==3.2.0
+idna==3.4 

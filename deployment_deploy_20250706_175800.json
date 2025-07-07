@@ -1,0 +1,41 @@
+{
+  "deployment_id": "deploy_20250706_175800",
+  "app_name": "ai-horizon-ed",
+  "started_at": "2025-07-06T17:58:00.147598",
+  "status": "initializing",
+  "phases": {
+    "prerequisites": {
+      "status": "success",
+      "checks": {
+        "heroku_cli": true,
+        "git": true,
+        "heroku_auth": true,
+        "app_exists": true,
+        "local_db": true,
+        "file_requirements.txt": true,
+        "file_Procfile": true,
+        "file_runtime.txt": true,
+        "app_structure": true
+      },
+      "issues": []
+    },
+    "backup": {
+      "status": "failed",
+      "backup_data": {},
+      "errors": [
+        "Expecting value: line 1 column 1 (char 0)"
+      ]
+    },
+    "preparation": {
+      "status": "success",
+      "actions": [
+        "Validated requirements.txt",
+        "Validated Procfile",
+        "Validated runtime.txt"
+      ],
+      "issues": []
+    }
+  },
+  "rollback_data": {},
+  "errors": []
+}

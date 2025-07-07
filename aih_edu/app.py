@@ -374,6 +374,37 @@ def api_status():
         "config": "loaded"
     })
 
+@app.route('/api/health')
+def api_health():
+    """Comprehensive health check endpoint"""
+    try:
+        # Import health check system
+        from health_checks import HealthCheckManager
+        
+        # Run health checks
+        health_manager = HealthCheckManager()
+        health_report = health_manager.run_all_checks()
+        
+        # Return appropriate HTTP status based on health
+        if health_report['overall_status'] == 'healthy':
+            return jsonify(health_report), 200
+        elif health_report['overall_status'] == 'degraded':
+            return jsonify(health_report), 200  # Still return 200 but with warnings
+        else:
+            return jsonify(health_report), 503  # Service unavailable
+    
+    except Exception as e:
+        # Fallback health check if our comprehensive system fails
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat(),
+            'fallback_checks': {
+                'database': 'connected' if db_manager else 'disconnected',
+                'environment': os.environ.get('FLASK_ENV', 'production')
+            }
+        }), 500
+
 @app.route('/api/skills/emerging')
 def api_emerging_skills():
     """Get emerging skills from database"""
