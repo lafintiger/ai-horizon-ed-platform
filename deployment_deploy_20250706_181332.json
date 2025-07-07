@@ -2,7 +2,7 @@
   "deployment_id": "deploy_20250706_181332",
   "app_name": "ai-horizon-edu",
   "started_at": "2025-07-06T18:13:32.513016",
-  "status": "initializing",
+  "status": "failed",
   "phases": {
     "prerequisites": {
       "status": "success",
@@ -106,6 +106,25 @@
         "Validated runtime.txt"
       ],
       "issues": []
+    },
+    "deployment": {
+      "status": "success",
+      "steps": [
+        "Added changes to git",
+        "Committed changes",
+        "Pushed to Heroku successfully",
+        "Deployment completed"
+      ],
+      "errors": []
+    },
+    "database": {
+      "status": "failed",
+      "steps": [
+        "Added PostgreSQL addon"
+      ],
+      "errors": [
+        "Failed to get DATABASE_URL"
+      ]
     }
   },
   "rollback_data": {
@@ -183,5 +202,14 @@
       }
     ]
   },
-  "errors": []
+  "errors": [],
+  "error": "Database setup failed: ['Failed to get DATABASE_URL']",
+  "failed_at": "2025-07-06T18:15:12.265020",
+  "rollback": {
+    "status": "success",
+    "steps": [
+      "Rolled back to v3"
+    ],
+    "errors": []
+  }
 }
