@@ -1,0 +1,41 @@
+{
+  "status": "success",
+  "records_migrated": 0,
+  "tables_migrated": {
+    "emerging_skills": {
+      "records_migrated": 0,
+      "records_failed": 0,
+      "errors": [
+        "Table migration failed: 'sqlite3.Connection' object has no attribute 'cursor_factory'"
+      ]
+    },
+    "educational_resources": {
+      "records_migrated": 0,
+      "records_failed": 0,
+      "errors": [
+        "Table migration failed: 'sqlite3.Connection' object has no attribute 'cursor_factory'"
+      ]
+    },
+    "skill_resources": {
+      "records_migrated": 0,
+      "records_failed": 0,
+      "errors": [
+        "Table migration failed: 'sqlite3.Connection' object has no attribute 'cursor_factory'"
+      ]
+    },
+    "learning_content": {
+      "records_migrated": 0,
+      "records_failed": 0,
+      "errors": [
+        "Table migration failed: 'sqlite3.Connection' object has no attribute 'cursor_factory'"
+      ]
+    }
+  },
+  "errors": [
+    "Table migration failed: 'sqlite3.Connection' object has no attribute 'cursor_factory'",
+    "Table migration failed: 'sqlite3.Connection' object has no attribute 'cursor_factory'",
+    "Table migration failed: 'sqlite3.Connection' object has no attribute 'cursor_factory'",
+    "Table migration failed: 'sqlite3.Connection' object has no attribute 'cursor_factory'"
+  ],
+  "warnings": []
+}

@@ -2,7 +2,7 @@
   "deployment_id": "deploy_20250706_175800",
   "app_name": "ai-horizon-ed",
   "started_at": "2025-07-06T17:58:00.147598",
-  "status": "initializing",
+  "status": "failed",
   "phases": {
     "prerequisites": {
       "status": "success",
@@ -34,8 +34,34 @@
         "Validated runtime.txt"
       ],
       "issues": []
+    },
+    "deployment": {
+      "status": "success",
+      "steps": [
+        "Added changes to git",
+        "Committed changes",
+        "Pushed to Heroku successfully",
+        "Deployment completed"
+      ],
+      "errors": []
+    },
+    "database": {
+      "status": "failed",
+      "steps": [],
+      "errors": [
+        "Expecting value: line 1 column 1 (char 0)"
+      ]
     }
   },
   "rollback_data": {},
-  "errors": []
+  "errors": [],
+  "error": "Database setup failed: ['Expecting value: line 1 column 1 (char 0)']",
+  "failed_at": "2025-07-06T17:59:03.224787",
+  "rollback": {
+    "status": "failed",
+    "steps": [],
+    "errors": [
+      "Expecting value: line 1 column 1 (char 0)"
+    ]
+  }
 }
