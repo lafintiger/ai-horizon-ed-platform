@@ -1,49 +1,109 @@
-# AI-Horizon Educational Resources System
+# AI-Horizon Ed Platform - Fresh Start
 
-> **🎓 A comprehensive platform for discovering, collecting, and recommending educational resources for AI skills development**
+## 🚀 **PROJECT STATUS: READY FOR IMPLEMENTATION**
 
-## 📋 Overview
+This repository contains a **complete fresh start** for the AI-Horizon Ed platform. The previous system has been **archived** and we're beginning with a clean PostgreSQL-based architecture.
 
-The AI-Horizon Educational Resources System is a **completely separate** project from the workforce intelligence system. It focuses on helping students and faculty find, organize, and track educational resources (videos, articles, tutorials, tools) for AI and cybersecurity skills development.
+## 📁 **Repository Structure**
 
-## 🎯 Core Purpose
+```
+/
+├── archive/                           # Previous system (archived)
+│   └── legacy_system_20250706_215603/ # Complete previous codebase
+├── PRD_AI_HORIZON_ED_v2.md           # Comprehensive Product Requirements Document
+├── README.md                         # This file
+├── .git/                             # Git history (preserved)
+└── .gitignore                        # Git ignore rules
+```
 
-Unlike the workforce intelligence system that analyzes job market trends, this system is designed to:
+## 🎯 **Mission**
 
-- **Discover** educational content from multiple sources (YouTube, online courses, documentation)
-- **Organize** resources by skill category, difficulty level, and learning paths
-- **Recommend** personalized learning resources based on user preferences
-- **Track** learning progress and completion
-- **Curate** high-quality educational content collections
+Build a robust educational platform that helps students and faculty discover and learn emerging AI-related skills. Part of an NSF-funded workforce transformation initiative.
 
-## 🚀 Key Features
+**Public URL**: `ed.theaihorizon.org` (Heroku deployment)
 
-### 🔍 Resource Discovery
-- Multi-source search: YouTube, online courses, documentation, tutorials
-- AI-powered content analysis: Quality scoring and relevance ranking
-- Real-time content discovery: Fresh educational content identification
+## 📋 **Complete PRD Available**
 
-### 📚 Learning Paths
-- Structured curricula: Step-by-step learning sequences
-- Skill prerequisites: Dependency tracking for learning progression
-- Difficulty progression: Beginner to expert pathways
+The file `PRD_AI_HORIZON_ED_v2.md` contains:
+- ✅ Complete technical specifications
+- ✅ Database schema (PostgreSQL)
+- ✅ API endpoint definitions
+- ✅ UI/UX requirements
+- ✅ Implementation phases
+- ✅ Success metrics
+- ✅ Security requirements
 
-## 🛠️ Technology Stack
+## 🗂️ **Legacy System Archive**
 
-- **Backend**: Python 3.12, Flask 3.0
-- **Database**: SQLite (Educational resources, user progress, preferences)
-- **AI Services**: OpenAI, Anthropic (Content analysis & recommendations)
-- **Content APIs**: YouTube API, Course platforms
+The previous system (SQLite-based with database issues) is preserved in:
+```
+archive/legacy_system_20250706_215603/
+```
 
-## 🔒 Separation from Workforce Intelligence
+This includes:
+- Complete Flask application
+- SQLite database with 87 resources and 7 skills
+- All deployment scripts and configuration files
+- Full documentation and troubleshooting guides
 
-This system is **completely independent** from the AI-Horizon workforce intelligence system:
+**Note**: The legacy system can be run for demonstration purposes but should not be used as reference for the new system.
 
-- **Different databases**: Educational resources vs. job market data
-- **Different APIs**: Content discovery vs. workforce analysis  
-- **Different users**: Students/faculty vs. workforce analysts
-- **Different deployment**: Separate servers and configurations
+## 🎯 **Next Steps for Implementation**
+
+### **1. Environment Setup**
+- Install PostgreSQL locally
+- Create Python virtual environment
+- Set up API keys (OpenAI, Claude, Perplexity, YouTube)
+
+### **2. Database Creation**
+- Use PostgreSQL schema from PRD
+- Create `aih_edu_local` database
+- Run migration scripts
+
+### **3. Flask Application**
+- Build according to PRD specifications
+- Focus on PostgreSQL compatibility
+- Implement admin authentication
+
+### **4. API Integration**
+- Connect to external services
+- Implement content discovery
+- Add AI-powered analysis
+
+### **5. Deployment**
+- Test locally with PostgreSQL
+- Deploy to Heroku
+- Configure custom domain
+
+## 🔧 **Technical Requirements**
+
+- **Backend**: Python 3.9+ with Flask
+- **Database**: PostgreSQL 13+ (local + Heroku)
+- **APIs**: OpenAI, Claude, Perplexity, YouTube Data API v3
+- **Deployment**: Heroku with PostgreSQL add-on
+- **Version Control**: Git with checkpoint backups
+
+## 📊 **Success Criteria**
+
+- ✅ **Technical**: Clean PostgreSQL deployment, zero database corruption
+- ✅ **User**: Skills discovery → resource finding → learning → competency validation
+- ✅ **Content**: 80% of skills have 10+ curated resources
+- ✅ **Performance**: <2 seconds page load, 99.5% uptime
+
+## 🚨 **Important Notes**
+
+1. **No Legacy Code Reuse**: Start completely fresh, don't reference archived code
+2. **PostgreSQL Only**: No SQLite compatibility needed
+3. **Production Ready**: Build for immediate Heroku deployment
+4. **AI Integration**: Core requirement, not optional feature
+5. **Mobile Responsive**: Essential for user accessibility
+
+## 📞 **Support**
+
+- **PRD**: Complete specifications in `PRD_AI_HORIZON_ED_v2.md`
+- **Archive**: Legacy system in `archive/` folder for reference only
+- **Git History**: Preserved for project continuity
 
 ---
 
-**Note**: This is a separate educational platform, not part of the workforce intelligence system.
+**Ready to build the future of AI workforce education. Let's make this happen!** 🚀 
