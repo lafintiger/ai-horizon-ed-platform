@@ -536,6 +536,16 @@ def admin_dashboard():
                          total_resources=total_resources,
                          pending_resources=pending_resources)
 
+@app.route('/workflow')
+def workflow():
+    """Display the AI-powered educational workflow"""
+    return render_template('workflow.html')
+
+@app.route('/methodology')
+def methodology():
+    """Display the AI methodology and decision framework"""
+    return render_template('methodology.html')
+
 @app.route('/browse/resources')
 def browse_resources():
     """Browse all resources with pagination and filtering"""
@@ -549,8 +559,10 @@ def browse_resources():
     query = EducationalResource.query
     
     if category:
-        # Join through SkillLearningPath to get to EmergingSkill
-        query = query.join(SkillLearningPath).join(EmergingSkill).filter(EmergingSkill.category == category)
+        # Use subquery to avoid duplicates when filtering by category
+        skill_ids = db.session.query(EmergingSkill.id).filter(EmergingSkill.category == category).subquery()
+        resource_ids = db.session.query(SkillLearningPath.resource_id).filter(SkillLearningPath.skill_id.in_(skill_ids)).subquery()
+        query = query.filter(EducationalResource.id.in_(resource_ids))
     
     if resource_type:
         query = query.filter(EducationalResource.resource_type == resource_type)
@@ -558,8 +570,8 @@ def browse_resources():
     if search:
         query = query.filter(EducationalResource.title.contains(search))
     
-    # Order by quality score descending
-    query = query.order_by(EducationalResource.quality_score.desc())
+    # Order by quality score descending, then by title for consistency
+    query = query.order_by(EducationalResource.quality_score.desc(), EducationalResource.title)
     
     # Paginate
     resources = query.paginate(
@@ -585,6 +597,55 @@ def browse_resources():
 def admin_prompts():
     """View AI prompts being used in the system"""
     return render_template('admin_prompts.html')
+
+@app.route('/admin/quiz-management')
+@require_admin()
+def admin_quiz_management():
+    """Admin page for managing quiz questions and standardization"""
+    try:
+        # Get quiz counts per resource
+        result = db.session.execute(text(
+            'SELECT resource_id, COUNT(*) as question_count FROM quiz_questions GROUP BY resource_id ORDER BY resource_id'
+        )).fetchall()
+        
+        quiz_data = []
+        total_quizzes = 0
+        quizzes_with_5_questions = 0
+        
+        for row in result:
+            resource_id = row[0]
+            question_count = row[1]
+            total_quizzes += 1
+            
+            # Get resource details
+            resource = EducationalResource.query.get(resource_id)
+            
+            if question_count == 5:
+                quizzes_with_5_questions += 1
+            
+            quiz_data.append({
+                'resource_id': resource_id,
+                'question_count': question_count,
+                'title': resource.title if resource else 'Unknown',
+                'resource_type': resource.resource_type if resource else 'Unknown',
+                'status': 'complete' if question_count == 5 else 'needs_update'
+            })
+        
+        stats = {
+            'total_quizzes': total_quizzes,
+            'quizzes_with_5_questions': quizzes_with_5_questions,
+            'quizzes_needing_updates': total_quizzes - quizzes_with_5_questions
+        }
+        
+        return render_template('admin_quiz_management.html', 
+                             quiz_data=quiz_data, 
+                             stats=stats)
+    
+    except Exception as e:
+        logger.error(f"Error loading quiz management page: {e}")
+        return render_template('admin_quiz_management.html', 
+                             quiz_data=[], 
+                             stats={'error': str(e)})
 
 @app.route('/api/admin/ai/prompts')
 @require_admin()
@@ -1015,6 +1076,148 @@ def api_admin_ai_status():
     
     return jsonify(status)
 
+@app.route('/api/admin/check-quiz-counts')
+def api_admin_check_quiz_counts():
+    """Admin endpoint to check quiz question counts"""
+    redirect_response = require_admin()
+    if redirect_response:
+        return jsonify({'error': 'Admin access required'}), 401
+    
+    try:
+        # Check current quiz question counts using the quiz_questions table
+        result = db.session.execute(text(
+            'SELECT resource_id, COUNT(*) as question_count FROM quiz_questions GROUP BY resource_id ORDER BY resource_id'
+        )).fetchall()
+        
+        quiz_counts = []
+        total_quizzes = 0
+        quizzes_with_5_questions = 0
+        
+        for row in result:
+            total_quizzes += 1
+            question_count = row[1]
+            if question_count == 5:
+                quizzes_with_5_questions += 1
+            quiz_counts.append({
+                'resource_id': row[0],
+                'question_count': question_count
+            })
+        
+        return jsonify({
+            'quiz_counts': quiz_counts,
+            'total_quizzes': total_quizzes,
+            'quizzes_with_5_questions': quizzes_with_5_questions,
+            'quizzes_needing_updates': total_quizzes - quizzes_with_5_questions
+        })
+    except Exception as e:
+        logger.error(f"Error checking quiz counts: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/standardize-quiz-counts', methods=['POST'])
+def api_admin_standardize_quiz_counts():
+    """Admin endpoint to standardize all quizzes to 5 questions"""
+    redirect_response = require_admin()
+    if redirect_response:
+        return jsonify({'error': 'Admin access required'}), 401
+    
+    try:
+        # Get all resources with quiz questions and their current counts
+        result = db.session.execute(text(
+            'SELECT resource_id, COUNT(*) as question_count FROM quiz_questions GROUP BY resource_id ORDER BY resource_id'
+        )).fetchall()
+        
+        updated_quizzes = []
+        failed_updates = []
+        
+        for row in result:
+            resource_id = row[0]
+            current_count = row[1]
+            
+            if current_count == 5:
+                continue  # Already has 5 questions, skip
+            
+            try:
+                # Get the resource for context
+                resource = EducationalResource.query.get(resource_id)
+                if not resource:
+                    failed_updates.append({
+                        'resource_id': resource_id,
+                        'error': 'Resource not found'
+                    })
+                    continue
+                
+                # Clear existing quiz questions
+                QuizQuestion.query.filter_by(resource_id=resource_id).delete()
+                
+                # Prepare resource data
+                resource_data = {
+                    'id': resource.id,
+                    'title': resource.title,
+                    'description': resource.description,
+                    'url': resource.url,
+                    'resource_type': resource.resource_type,
+                    'difficulty_level': resource.difficulty_level
+                }
+                
+                # Get analysis data if available
+                analysis = ResourceAnalysis.query.filter_by(resource_id=resource_id).first()
+                analysis_data = analysis.to_dict() if analysis else None
+                
+                # Generate exactly 5 new questions
+                new_questions = asyncio.run(ai_services.content_analyzer.generate_quiz_questions(
+                    resource_data, analysis_data, 5
+                ))
+                
+                if not new_questions or len(new_questions) != 5:
+                    failed_updates.append({
+                        'resource_id': resource_id,
+                        'error': f'Failed to generate exactly 5 questions (got {len(new_questions) if new_questions else 0})'
+                    })
+                    continue
+                
+                # Store new questions in the database
+                for q in new_questions:
+                    quiz_question = QuizQuestion(
+                        resource_id=resource_id,
+                        question_text=q['question_text'],
+                        option_a=q['option_a'],
+                        option_b=q['option_b'],
+                        option_c=q['option_c'],
+                        option_d=q['option_d'],
+                        correct_answer=q['correct_answer'],
+                        explanation=q.get('explanation', '')
+                    )
+                    db.session.add(quiz_question)
+                
+                updated_quizzes.append({
+                    'resource_id': resource_id,
+                    'title': resource.title,
+                    'old_count': current_count,
+                    'new_count': 5
+                })
+                
+            except Exception as e:
+                failed_updates.append({
+                    'resource_id': resource_id,
+                    'error': str(e)
+                })
+        
+        # Commit all updates
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'updated_quizzes': updated_quizzes,
+            'failed_updates': failed_updates,
+            'total_updated': len(updated_quizzes),
+            'total_failed': len(failed_updates)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error standardizing quiz counts: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/resources/<int:resource_id>/analyze', methods=['POST'])
 @require_admin()
 def analyze_resource(resource_id):
@@ -1108,10 +1311,9 @@ def generate_resource_quiz(resource_id):
         analysis = ResourceAnalysis.query.filter_by(resource_id=resource_id).first()
         analysis_data = analysis.to_dict() if analysis else None
         
-        # Generate quiz questions
-        num_questions = request.json.get('num_questions', 5)
+        # Generate quiz questions (always 5 questions)
         questions = asyncio.run(ai_services.content_analyzer.generate_quiz_questions(
-            resource_data, analysis_data, num_questions
+            resource_data, analysis_data, 5
         ))
         
         if not questions:
@@ -1235,6 +1437,24 @@ def resource_analysis(resource_id):
     # Get skill context
     skill_paths = SkillLearningPath.query.filter_by(resource_id=resource_id).all()
     skills = [path.skill for path in skill_paths]
+    
+    # Parse JSON fields for template rendering
+    if analysis:
+        try:
+            analysis.key_concepts = json.loads(analysis.key_concepts) if analysis.key_concepts else []
+            analysis.key_takeaways = json.loads(analysis.key_takeaways) if analysis.key_takeaways else []
+            analysis.actionable_insights = json.loads(analysis.actionable_insights) if analysis.actionable_insights else []
+            analysis.best_practices = json.loads(analysis.best_practices) if analysis.best_practices else []
+            analysis.common_pitfalls = json.loads(analysis.common_pitfalls) if analysis.common_pitfalls else []
+            analysis.industry_relevance = json.loads(analysis.industry_relevance) if analysis.industry_relevance else []
+        except (json.JSONDecodeError, TypeError):
+            # Handle cases where JSON parsing fails
+            analysis.key_concepts = []
+            analysis.key_takeaways = []
+            analysis.actionable_insights = []
+            analysis.best_practices = []
+            analysis.common_pitfalls = []
+            analysis.industry_relevance = []
     
     return render_template('resource_analysis.html', 
                          resource=resource, 
