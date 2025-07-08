@@ -42,7 +42,7 @@
    - Configure API keys using `config_template.env`
 
 2. **Database Creation**
-   - Create `aih_edu_local` PostgreSQL database
+   - Create `ai_horizon_local` PostgreSQL database
    - Run schema creation scripts from PRD
    - Set up connection configuration
 

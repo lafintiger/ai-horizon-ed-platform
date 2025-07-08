@@ -42,5 +42,5 @@ instance/
 .DS_Store
 Thumbs.db
 
-# Include aih_edu gitignore
-aih_edu/.gitignore 
+# Include legacy system gitignore
+archive/legacy_system*/.gitignore 

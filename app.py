@@ -19,7 +19,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
 
 # Fix DATABASE_URL for Heroku (postgres:// -> postgresql://)
-database_url = os.getenv('DATABASE_URL', 'postgresql://vincentnestler@localhost/aih_edu_local')
+database_url = os.getenv('DATABASE_URL', 'postgresql://vincentnestler@localhost/ai_horizon_local')
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 

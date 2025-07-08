@@ -365,7 +365,7 @@ CREATE TABLE learning_sessions (
 ## 🚀 **DEPLOYMENT STRATEGY**
 
 ### **Development Environment**
-- **Local PostgreSQL**: `aih_edu_local` database
+- **Local PostgreSQL**: `ai_horizon_local` database
 - **Environment Variables**: `.env` file with API keys
 - **Flask Development Server**: `flask run` for local testing
 - **Database Migrations**: Version-controlled schema changes

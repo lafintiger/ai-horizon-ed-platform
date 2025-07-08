@@ -57,7 +57,7 @@ This includes:
 
 ### **2. Database Creation**
 - Use PostgreSQL schema from PRD
-- Create `aih_edu_local` database
+- Create `ai_horizon_local` database
 - Run migration scripts
 
 ### **3. Flask Application**

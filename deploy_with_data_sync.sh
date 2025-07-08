@@ -21,7 +21,7 @@ echo "📄 Using export file: $EXPORT_FILE"
 echo "🔄 Committing and pushing to Heroku..."
 git add .
 git commit -m "Deploy with data sync - $(date)"
-git push production heroku-deployment:main
+git push heroku heroku-deployment:main
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to push to Heroku"
