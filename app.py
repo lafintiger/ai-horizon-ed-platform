@@ -1502,6 +1502,24 @@ def resource_projects(resource_id):
     skill_paths = SkillLearningPath.query.filter_by(resource_id=resource_id).all()
     skills = [path.skill for path in skill_paths]
     
+    # Parse JSON fields for template rendering
+    for project in projects:
+        try:
+            project.objectives = json.loads(project.objectives) if project.objectives else []
+            project.deliverables = json.loads(project.deliverables) if project.deliverables else []
+            project.success_criteria = json.loads(project.success_criteria) if project.success_criteria else []
+            project.required_tools = json.loads(project.required_tools) if project.required_tools else []
+            project.skills_practiced = json.loads(project.skills_practiced) if project.skills_practiced else []
+            project.concepts_applied = json.loads(project.concepts_applied) if project.concepts_applied else []
+        except (json.JSONDecodeError, TypeError):
+            # Handle cases where JSON parsing fails
+            project.objectives = []
+            project.deliverables = []
+            project.success_criteria = []
+            project.required_tools = []
+            project.skills_practiced = []
+            project.concepts_applied = []
+    
     return render_template('resource_projects.html', 
                          resource=resource, 
                          projects=projects,
