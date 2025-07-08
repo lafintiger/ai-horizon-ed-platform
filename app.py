@@ -794,6 +794,22 @@ def api_skills():
     skills = EmergingSkill.query.filter_by(status='active').all()
     return jsonify([skill.to_dict() for skill in skills])
 
+@app.route('/api/resources')
+def api_resources():
+    """API endpoint to get all resources - basic endpoint for frontend"""
+    try:
+        resources = EducationalResource.query.filter_by(status='approved').all()
+        
+        return jsonify({
+            "resources": [resource.to_dict() for resource in resources],
+            "total_count": len(resources),
+            "status": "success"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting resources: {e}")
+        return jsonify({"error": "Failed to get resources"}), 500
+
 @app.route('/api/skills/<int:skill_id>/resources')
 def api_skill_resources(skill_id):
     """API endpoint to get resources for a specific skill"""
