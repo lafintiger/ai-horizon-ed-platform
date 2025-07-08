@@ -68,11 +68,7 @@ class AIServicesManager:
         if api_key:
             try:
                 # Initialize with minimal configuration to avoid compatibility issues
-                return openai.OpenAI(
-                    api_key=api_key,
-                    timeout=30.0,
-                    max_retries=3
-                )
+                return openai.OpenAI(api_key=api_key)
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client: {e}")
                 return None
