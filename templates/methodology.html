@@ -3,53 +3,18 @@
 {% block title %}AI Methodology & Decision Framework - AI-Horizon Ed{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h2">
-                    <i class="fas fa-cog me-2"></i>
+            <div class="text-center py-4 bg-gradient-primary text-white rounded">
+                <h1 class="display-5">
+                    <i class="fas fa-cog me-3"></i>
                     AI Methodology & Decision Framework
                 </h1>
-                <div>
-                    <a href="{{ url_for('workflow') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-project-diagram me-1"></i>View Workflow
-                    </a>
-                </div>
-            </div>
-            
-            <div class="alert alert-primary mb-4">
-                <i class="fas fa-university me-2"></i>
-                <strong>Academic Transparency:</strong> This methodology documentation provides complete transparency into our AI-powered decision-making processes, scoring algorithms, and quality assessment frameworks for NSF grant compliance and reproducibility.
-            </div>
-        </div>
-    </div>
-
-    <!-- Table of Contents -->
-    <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">
-                <i class="fas fa-list me-2"></i>
-                Methodology Components
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <ul class="list-unstyled">
-                        <li><a href="#skills-discovery" class="text-decoration-none">1. Skills Discovery Methodology</a></li>
-                        <li><a href="#resource-discovery" class="text-decoration-none">2. Resource Discovery Methodology</a></li>
-                        <li><a href="#content-analysis" class="text-decoration-none">3. Content Analysis Framework</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-6">
-                    <ul class="list-unstyled">
-                        <li><a href="#quality-assessment" class="text-decoration-none">4. Quality Assessment Algorithm</a></li>
-                        <li><a href="#quiz-generation" class="text-decoration-none">5. Quiz Generation Method</a></li>
-                        <li><a href="#project-generation" class="text-decoration-none">6. Project Generation Framework</a></li>
-                        <li><a href="#curation-presentation" class="text-decoration-none">7. Curation & Presentation Logic</a></li>
-                    </ul>
-                </div>
+                <p class="lead mb-0">
+                    Transparent AI-powered educational resource discovery and analysis
+                </p>
             </div>
         </div>
     </div>
@@ -69,21 +34,31 @@
                     <p>Our skills discovery uses a multi-stage AI pipeline combining real-time web intelligence with structured analysis.</p>
                     
                     <h6>Stage 1: Query Generation</h6>
-                    <pre class="bg-light p-3 rounded"><code>SYSTEM_PROMPT = """
-You are an expert workforce analyst specializing in AI 
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <strong><i class="fas fa-info-circle me-2"></i>System Prompt:</strong>
+                            </div>
+                            <pre class="bg-light p-3 rounded small"><code>You are an expert workforce analyst specializing in AI 
 and cybersecurity skills trends. Provide detailed, 
 actionable insights about emerging skills with specific 
-market evidence.
-"""
-
-USER_PROMPT = """
-What are the most critical emerging skills needed in 
+market evidence.</code></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-success">
+                                <strong><i class="fas fa-question-circle me-2"></i>User Query Template:</strong>
+                            </div>
+                            <pre class="bg-light p-3 rounded small"><code>What are the most critical emerging skills needed in 
 {domain} for {timeframe}? Focus on:
 1. AI-enhanced cybersecurity roles
 2. New technologies requiring specialized knowledge  
 3. Skills with high market demand and urgency
-4. Roles that combine AI with traditional cybersecurity
-"""</code></pre>
+4. Roles that combine AI with traditional cybersecurity</code></pre>
+                        </div>
+                    </div>
                     
                     <h6>Stage 2: Response Processing</h6>
                     <p>Perplexity API responses are parsed using OpenAI GPT-4 with structured extraction:</p>
@@ -149,8 +124,10 @@ What are the most critical emerging skills needed in
                     <p>For each skill, we execute a systematic resource discovery process using multi-source intelligence.</p>
                     
                     <h6>Query Strategy</h6>
-                    <pre class="bg-light p-3 rounded"><code>SEARCH_TEMPLATE = """
-Find the best educational resources for learning 
+                    <div class="alert alert-warning">
+                        <strong><i class="fas fa-search me-2"></i>Resource Discovery Template:</strong>
+                    </div>
+                    <pre class="bg-light p-3 rounded small"><code>Find the best educational resources for learning 
 "{skill_name}" focusing on {resource_type}.
 
 Requirements:
@@ -163,8 +140,7 @@ For each resource, provide:
 - Title, Description, URL
 - Difficulty level (Beginner/Intermediate/Advanced)
 - Estimated duration
-- Why it's valuable
-"""</code></pre>
+- Why it's valuable</code></pre>
                     
                     <h6>Source Prioritization</h6>
                     <p>Resources are discovered from sources ranked by credibility:</p>
